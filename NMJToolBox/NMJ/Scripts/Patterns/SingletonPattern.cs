@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace NMJToolBox
 {
+    [DefaultExecutionOrder(-10)]
     public abstract class SingletonPattern<T> : MonoBehaviour where T : MonoBehaviour
     {
         [SerializeField] protected bool dontDestroy = false;
