@@ -8,3 +8,6 @@ NaughtyAttributes by dbrizov : https://github.com/dbrizov/NaughtyAttributes
 EButton by Script Boy: https://assetstore.unity.com/packages/tools/utilities/ebutton-196880
 
 EditorToolbox by Kevin Castejon: https://assetstore.unity.com/packages/tools/utilities/editortoolbox-198306
+
+
+To get This from git URL: https://github.com/NMeJa/NMJToolBox.git
