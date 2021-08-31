@@ -1,9 +1,8 @@
 {
-    "name": "nNaughtyAttributes.Test",
+    "name": "NMJ.NMJTools.Editor",
     "rootNamespace": "",
     "references": [
-        "NMJToolbox",
-        "NMJ.NaughtyAttributes.Runtime"
+        "GUID:0f0b29311be08be4597b091fd61ae9a7"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
