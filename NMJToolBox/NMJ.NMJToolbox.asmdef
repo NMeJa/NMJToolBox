@@ -1,6 +1,6 @@
 {
-    "name": "NMJToolbox",
-    "rootNamespace": "NMJToolBox",
+    "name": "NMJ.NMJToolbox",
+    "rootNamespace": "NMJToolbox",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],

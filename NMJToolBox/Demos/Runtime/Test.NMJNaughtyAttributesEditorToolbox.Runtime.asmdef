@@ -1,0 +1,19 @@
+{
+    "name": "Test.NMJNaughtyAttributesEditorToolbox.Runtime",
+    "rootNamespace": "",
+    "references": [
+        "NMJ.NaughtyAttributes.Runtime",
+        "NMJ.EditorToolbox.Runtime",
+        "NMJ.NMJTools.Runtime",
+        "NMJ.NMJToolbox"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

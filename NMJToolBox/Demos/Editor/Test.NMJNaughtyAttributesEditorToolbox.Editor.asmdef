@@ -1,11 +1,12 @@
 {
-    "name": "nNaughtyAttributes.Test",
+    "name": "Test.NMJNaughtyAttributesEditorToolbox.Editor",
     "rootNamespace": "",
     "references": [
-        "NMJToolbox",
-        "NMJ.NaughtyAttributes.Runtime"
+        "GUID:9666f83e685487e4f880498c05ff5b02"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
