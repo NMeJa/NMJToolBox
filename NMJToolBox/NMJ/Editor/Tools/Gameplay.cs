@@ -5,6 +5,7 @@ namespace NMJToolBox
 {
     public static class GameplayTools
     {
+    /*
         [MenuItem("Tools/NMJ/Reset Transform %_R")]
         public static void ResetTransform()
         {
@@ -26,7 +27,7 @@ namespace NMJToolBox
                 element.localScale = Vector3.one;
             }
         }
-
+*/
         private static void SetUndo(Object target, string title)
         {
             Undo.RecordObject(target, title);

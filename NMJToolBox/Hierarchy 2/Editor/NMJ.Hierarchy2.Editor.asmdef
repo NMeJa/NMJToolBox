@@ -1,8 +1,12 @@
 {
-    "name": "NMJ.EditorToolbox.Runtime",
+    "name": "NMJ.Hierarchy2.Editor",
     "rootNamespace": "",
-    "references": [],
-    "includePlatforms": [],
+    "references": [
+        "NMJ.Hierarchy2.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
