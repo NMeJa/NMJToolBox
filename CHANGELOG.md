@@ -4,6 +4,12 @@
 
 ## v1.0.1
  Fix:
+  - Added Hotkey Scenes Switcher from https://github.com/vimpsoft/ScenesSwitcher by Andrey Tsarkov
+
+---
+
+## v1.0.1
+ Fix:
   - Added Hierarchy 2 from https://github.com/truongnguyentungduy/hierarchy-2 by truongnguyentungduy
 
 ---

@@ -1,6 +1,6 @@
 {
   "name": "com.nmj_gd.nmjtoolbox",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "displayName": "NMJ ToolBox",
   "description": "This is an useful helper scripts and editor tool for Inspector and Scripting.\nSomething are written by me, most are collection of attributes and tools from different sources.\nThird Party:\nNaughtyAttributes by dbrizov\r : https://github.com/dbrizov/NaughtyAttributes\nEButton by Script Boy: https://assetstore.unity.com/packages/tools/utilities/ebutton-196880\nEditorToolbox by \rKevin Castejon: https://assetstore.unity.com/packages/tools/utilities/editortoolbox-198306",
   "unity": "2021.1",
