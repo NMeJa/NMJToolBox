@@ -11,8 +11,10 @@ namespace NMJToolBox
         [SerializeField]
         private UnityEditor.SceneAsset sceneAsset;
 #endif
-        [ReadOnly, SerializeField] private string sceneName;
+        [SerializeField] [ReadOnly] [AllowNesting]
+        private string sceneName;
 
+        public void _LoadScene(string scene) => SceneManager.LoadScene(scene);
         public void _LoadScene() => SceneManager.LoadScene(sceneName);
         public void _LoadParallelScene() => SceneManager.LoadScene(sceneName, LoadSceneMode.Additive);
 
