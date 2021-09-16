@@ -34,7 +34,9 @@ namespace NMJToolBox
             {
                 DontDestroyOnLoad(gameObject);
             }
-        }
+            PersonalAwake();
+        }   
+        protected virtual void PersonalAwake(){}
 
         private static void CreateInstance()
         {
