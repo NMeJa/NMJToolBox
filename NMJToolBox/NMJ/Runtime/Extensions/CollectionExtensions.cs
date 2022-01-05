@@ -6,6 +6,8 @@ namespace NMJToolBox
 {
     public static class CollectionExtensions
     {
+        public static bool IsEmpty<T>(this IEnumerable<T> source) => !source.Any();
+
         public static IEnumerable<T> DistinctBy<T, TKey>(this IEnumerable<T> items, Func<T, TKey> property)
         {
             return items.GroupBy(property).Select(x => x.First());
@@ -111,7 +113,7 @@ namespace NMJToolBox
         {
             if (list.Count <= 0)
                 throw new ArgumentNullException(nameof(list),
-                    "Pop: List is empty");
+                                                "Pop: List is empty");
             var lastElementIndex = list.Count - 1;
             var r = list[lastElementIndex];
             list.RemoveAt(lastElementIndex);
@@ -122,10 +124,10 @@ namespace NMJToolBox
         {
             if (list.Count <= 0)
                 throw new ArgumentNullException(nameof(list),
-                    "PopAt: List is empty");
+                                                "PopAt: List is empty");
             if (list.Count <= index)
                 throw new ArgumentOutOfRangeException(nameof(list), index,
-                    "PopAt: Index is outside of List element Count");
+                                                      "PopAt: Index is outside of List element Count");
             var r = list[index];
             list.RemoveAt(index);
             return r;
@@ -135,7 +137,7 @@ namespace NMJToolBox
         {
             if (list.Count <= 0)
                 throw new ArgumentNullException(nameof(list),
-                    "Dequeue: List is empty");
+                                                "Dequeue: List is empty");
             var firstElementIndex = list[0];
             list.RemoveAt(0);
             return firstElementIndex;

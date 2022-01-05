@@ -1,0 +1,18 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <Style src="project://database/Assets/CustomListView/ListContainer.uss?fileID=7433441132597879392&amp;guid=5c8012ff175329d40a2c1df0a06c377b&amp;type=3#ListContainer" />
+    <ui:VisualElement name="ListContainer">
+        <ui:VisualElement name="HeaderContainer" class="header-container">
+            <ui:Label text="Title" display-tooltip-when-elided="true" name="Title" class="header-text" />
+            <uie:IntegerField value="0" name="Amount" is-delayed="true" class="header-amount-field" />
+        </ui:VisualElement>
+        <ui:Foldout name="ShowHide">
+            <ui:VisualElement name="ScrollContainer" class="scroll-container-margin">
+                <ui:ScrollView name="Scroll" />
+            </ui:VisualElement>
+        </ui:Foldout>
+        <uie:Toolbar name="AddRemove" class="footer-container">
+            <uie:ToolbarButton text="-" display-tooltip-when-elided="true" name="Remove" class="footer-button" />
+            <uie:ToolbarButton text="+" display-tooltip-when-elided="true" name="Add" class="footer-button" />
+        </uie:Toolbar>
+    </ui:VisualElement>
+</ui:UXML>

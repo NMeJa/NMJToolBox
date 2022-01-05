@@ -1,5 +1,5 @@
 using UnityEditor;
-using UnityEditor.Experimental.SceneManagement;
+
 using UnityEngine;
 
 namespace NMJToolBox
@@ -10,7 +10,7 @@ namespace NMJToolBox
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             ReadOnlyOnPrefabAttribute att = (ReadOnlyOnPrefabAttribute)attribute;
-            bool rdOnly = att.invert ? PrefabStageUtility.GetCurrentPrefabStage() == null : PrefabStageUtility.GetCurrentPrefabStage() != null;
+            bool rdOnly = att.invert ? UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage() == null : UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage() != null;
             if (rdOnly)
             {
                 EditorGUI.BeginDisabledGroup(true);

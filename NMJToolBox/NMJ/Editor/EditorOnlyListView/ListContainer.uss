@@ -1,0 +1,33 @@
+.header-container {
+    flex-direction: row;
+    justify-content: space-between;
+    height: 47px;
+    flex-shrink: 0;
+}
+
+.header-text {
+    -unity-text-align: middle-left;
+    font-size: 17px;
+}
+
+.header-amount-field {
+    -unity-text-align: middle-center;
+    height: 25px;
+    top: 15px;
+    max-width: 75px;
+    min-width: 25px;
+}
+
+.scroll-container-margin {
+    margin: 5px;
+}
+
+.footer-container {
+    flex-direction: row-reverse;
+}
+
+.footer-button {
+    margin-right: 4px;
+    font-size: 20px;
+    -unity-text-align: lower-left;
+}
