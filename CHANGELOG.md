@@ -2,11 +2,13 @@
 
 ## v1.0.4
   Changes:
+  
     -SceneChanger.cs: it know loads using scenepath instead of name.
     
 ---  
 ## v1.0.3
   Changes:
+  
     -Added JsonParser from string to generic [Serializable] object
     -Added String Trim Extension for start and end
     -Added AssetDatabaseExtensions ande AssetDatabaseUtilities
@@ -15,6 +17,7 @@
 ---
 ## v1.0.2
   Changes:
+  
     -Deleted Hotkey Scenes Switcher from https://github.com/vimpsoft/ScenesSwitcher by Andrey Tsarkov
     -Deleted Hierarchy 2 from https://github.com/truongnguyentungduy/hierarchy-2 by truongnguyentungduy
 
@@ -22,12 +25,14 @@
 
 ## v1.0.1
  Changes:
+ 
   - Added Hotkey Scenes Switcher from https://github.com/vimpsoft/ScenesSwitcher by Andrey Tsarkov
 
 ---
 
 ## v1.0.1
  Changes:
+ 
   - Added Hierarchy 2 from https://github.com/truongnguyentungduy/hierarchy-2 by truongnguyentungduy
 
 ---
