@@ -1,12 +1,10 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace NMJToolBox
 {
     public class SceneChanger : MonoBehaviour, ISerializationCallbackReceiver
     {
-        [Header("Make Sure Scene Names are unique\nBecause it is Loading Though name not path")]
-        [Space]
 #if UNITY_EDITOR
         [SerializeField]
         private UnityEditor.SceneAsset sceneAsset;
@@ -24,7 +22,7 @@ namespace NMJToolBox
         public void OnBeforeSerialize()
         {
 #if UNITY_EDITOR
-            if (sceneAsset) sceneName = sceneAsset.name;
+	        if (sceneAsset) sceneName = UnityEditor.AssetDatabase.GetAssetOrScenePath(sceneAsset);
 #endif
         }
 
