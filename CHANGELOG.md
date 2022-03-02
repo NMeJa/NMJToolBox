@@ -1,6 +1,6 @@
 # NMJToolKit version history
 
-## v1.0.3
+## v1.0.4
   Changes:
     -SceneChanger.cs: it know loads using scenepath instead of name.
     
