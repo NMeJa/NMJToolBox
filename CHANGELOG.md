@@ -1,5 +1,9 @@
 # NMJToolKit version history
----
+
+## v1.0.3
+  Changes:
+    -SceneChanger.cs: it know loads using scenepath instead of name.
+---  
 ## v1.0.3
   Changes:
     -Added JsonParser from string to generic [Serializable] object
