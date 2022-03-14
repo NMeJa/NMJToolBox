@@ -1,5 +1,11 @@
 # NMJToolKit version history
 
+## v1.0.5
+  Changes:
+  
+    -StateMachineGenerator.cs: Added optional UnityEvents Generator for Enter and Exit methods.
+    
+---  
 ## v1.0.4
   Changes:
   
