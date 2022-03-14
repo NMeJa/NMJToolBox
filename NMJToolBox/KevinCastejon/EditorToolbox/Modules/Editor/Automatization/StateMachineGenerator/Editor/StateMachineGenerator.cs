@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace NMJToolBox
 {
@@ -11,10 +12,10 @@ namespace NMJToolBox
         string prefixName = "";
         List<string> states = new List<string>();
         int defaultState = 0;
+        bool useUnityEvenets = false;
         bool useRegions = false;
         bool spaceRegions = false;
         bool groupByPhase = false;
-
         bool codeStyleOpen = false;
 
         static GUIStyle ErrorStyle;
@@ -89,6 +90,7 @@ namespace NMJToolBox
                     {
                         EditorGUILayout.Space(5);
                         EditorGUILayout.BeginHorizontal();
+                        useUnityEvenets = EditorGUILayout.ToggleLeft("Use UnityEvents", useUnityEvenets);
                         useRegions = EditorGUILayout.Toggle("Use regions", useRegions);
                         if (useRegions)
                         {
@@ -269,8 +271,10 @@ namespace NMJToolBox
                         foreach (string state in states)
                         {
                             string stateMethod = TInfo.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "");
+                            if(useUnityEvenets) outfile.WriteLine($"    public UnityEvent On{stateMethod}Enter = new UnityEvent();");
                             outfile.WriteLine($"    private void OnEnter{stateMethod}()");
                             outfile.WriteLine($"    {{");
+                            outfile.WriteLine($"        On{stateMethod}Enter?.Invoke();");
                             outfile.WriteLine($"    }}");
                         }
                         if (useRegions) outfile.WriteLine($"    #region UpdateState");
@@ -285,8 +289,10 @@ namespace NMJToolBox
                         foreach (string state in states)
                         {
                             string stateMethod = TInfo.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "");
+                            if(useUnityEvenets) outfile.WriteLine($"    public UnityEvent On{stateMethod}Exit = new UnityEvent();");
                             outfile.WriteLine($"    private void OnExit{stateMethod}()");
                             outfile.WriteLine($"    {{");
+                            outfile.WriteLine($"        On{stateMethod}Exit?.Invoke();");
                             outfile.WriteLine($"    }}");
                         }
                     }
