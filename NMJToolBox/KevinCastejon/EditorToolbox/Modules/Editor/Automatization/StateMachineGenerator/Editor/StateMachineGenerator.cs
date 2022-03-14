@@ -6,7 +6,7 @@ using UnityEditor;
 using UnityEngine;
 
 // ReSharper disable once CheckNamespace
-namespace NMJToolBoxTest
+namespace NMJToolBox
 {
 	public class StateMachineGenerator : EditorWindow
 	{
