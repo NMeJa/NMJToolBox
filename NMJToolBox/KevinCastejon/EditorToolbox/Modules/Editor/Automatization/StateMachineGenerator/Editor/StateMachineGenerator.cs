@@ -5,7 +5,6 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-// ReSharper disable once CheckNamespace
 namespace NMJToolBox
 {
 	public class StateMachineGenerator : EditorWindow
@@ -14,6 +13,7 @@ namespace NMJToolBox
 		private readonly List<string> states = new List<string>();
 		private int defaultState = 0;
 		private bool useUnityEvents = false;
+		private bool useFoldoutsOnEvents = false;
 		private bool useRegions = false;
 		private bool spaceRegions = false;
 		private bool groupByPhase = false;
@@ -88,6 +88,7 @@ namespace NMJToolBox
 				{
 					EditorGUILayout.Space(5);
 					useUnityEvents = EditorGUILayout.ToggleLeft("Use UnityEvents", useUnityEvents);
+					useFoldoutsOnEvents = EditorGUILayout.ToggleLeft("Use Foldout on Events", useFoldoutsOnEvents);
 					EditorGUILayout.BeginHorizontal();
 					useRegions = EditorGUILayout.Toggle("Use regions", useRegions);
 					spaceRegions = useRegions && EditorGUILayout.Toggle("Space regions", spaceRegions);
@@ -146,6 +147,7 @@ namespace NMJToolBox
 				       new StreamWriter(copyPath))
 				{
 					outfile.WriteLine($"using UnityEngine;");
+					if(useFoldoutsOnEvents) outfile.WriteLine($"using NMJToolBox;");
 					if (useUnityEvents) outfile.WriteLine($"using UnityEngine.Events;");
 					outfile.WriteLine($"");
 					if (useRegions) outfile.WriteLine($"#region States");
@@ -255,10 +257,10 @@ namespace NMJToolBox
 						{
 							string stateMethod = info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "");
 							if (useRegions) outfile.WriteLine($"    #region State {state}");
-							if (useUnityEvents)
-								outfile.WriteLine($"    public UnityEvent On{stateMethod}Enter = new UnityEvent();");
-							if (useUnityEvents)
-								outfile.WriteLine($"    public UnityEvent On{stateMethod}Exit = new UnityEvent();");
+							if(useFoldoutsOnEvents) outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
+							if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Enter = new UnityEvent();");
+							if(useFoldoutsOnEvents) outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
+							if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Exit = new UnityEvent();");
 							outfile.WriteLine($"    private void OnEnter{stateMethod}()");
 							outfile.WriteLine($"    {{");
 							if (useUnityEvents) outfile.WriteLine($"        On{stateMethod}Enter?.Invoke();");
@@ -277,12 +279,10 @@ namespace NMJToolBox
 					else
 					{
 						if (useRegions) outfile.WriteLine($"    #region EnterState");
-						foreach (var stateMethod in states.Select(state => info
-						                                                   .ToTitleCase(state.Replace("_", " ")
-							                                                   .ToLower()).Replace(" ", "")))
+						foreach (var stateMethod in states.Select(state => info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "")))
 						{
-							if (useUnityEvents)
-								outfile.WriteLine($"    public UnityEvent On{stateMethod}Enter = new UnityEvent();");
+							if(useFoldoutsOnEvents) outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
+							if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Enter = new UnityEvent();");
 							outfile.WriteLine($"    private void OnEnter{stateMethod}()");
 							outfile.WriteLine($"    {{");
 							if (useUnityEvents) outfile.WriteLine($"        On{stateMethod}Enter?.Invoke();");
@@ -304,8 +304,8 @@ namespace NMJToolBox
 						                                                   .ToTitleCase(state.Replace("_", " ")
 							                                                   .ToLower()).Replace(" ", "")))
 						{
-							if (useUnityEvents)
-								outfile.WriteLine($"    public UnityEvent On{stateMethod}Exit = new UnityEvent();");
+							if(useFoldoutsOnEvents)	outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
+							if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Exit = new UnityEvent();");
 							outfile.WriteLine($"    private void OnExit{stateMethod}()");
 							outfile.WriteLine($"    {{");
 							if (useUnityEvents) outfile.WriteLine($"        On{stateMethod}Exit?.Invoke();");
