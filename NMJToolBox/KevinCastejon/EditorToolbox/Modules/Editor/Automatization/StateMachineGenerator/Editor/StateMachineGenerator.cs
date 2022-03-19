@@ -68,7 +68,7 @@ namespace NMJToolBox
 			for (int i = 0; i < states.Count; i++)
 			{
 				EditorGUILayout.BeginHorizontal();
-				states[i] = EditorGUILayout.TextField("  State " + i, states[i]).Trim().ToUpper().Replace(" ", "_");
+				states[i] = EditorGUILayout.TextField("  State " + i, states[i]).Trim().ToUpper().Replace(" ", "_").Replace("-", "_");
 				bool isDefault = EditorGUILayout.ToggleLeft(defaultState == i ? "Default" : "", defaultState == i);
 				if (isDefault)
 				{
