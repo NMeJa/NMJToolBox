@@ -2,66 +2,69 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-public static class FolderStructureCreator
+namespace NMJToolBox
 {
-	[MenuItem("Tools/Create Custom Folder Structure")]
-	private static void CreateCustomFolderStructure()
+	public static class FolderStructureCreator
 	{
-		const string projectName = "__Game";
-		var mainFolderPath = $"Assets/{projectName}";
-
-		CreateFolderRecursively(mainFolderPath);
-
-		var editorFolders = new[]
+		[MenuItem("Tools/NMJ/Create Custom Folder Structure")]
+		private static void CreateCustomFolderStructure()
 		{
-			$"{mainFolderPath}/Editor/Scripts",
-			$"{mainFolderPath}/Editor/EditorResources"
-		};
+			const string projectName = "__Game";
+			var mainFolderPath = $"Assets/{projectName}";
 
-		var runtimeFolders = new[]
-		{
-			$"{mainFolderPath}/Runtime/Scenes",
-			$"{mainFolderPath}/Runtime/Scripts",
-			$"{mainFolderPath}/Runtime/Materials",
-			$"{mainFolderPath}/Runtime/Textures",
-			$"{mainFolderPath}/Runtime/Prefabs",
-			$"{mainFolderPath}/Runtime/Audio",
-			$"{mainFolderPath}/Runtime/Animations",
-			$"{mainFolderPath}/Runtime/Fonts",
-			$"{mainFolderPath}/Runtime/Resources",
-			$"{mainFolderPath}/Runtime/ScriptableObjects",
-			$"{mainFolderPath}/Runtime/Scripts/Managers",
-		};
+			CreateFolderRecursively(mainFolderPath);
 
-		CreateFolders(editorFolders);
-		CreateFolders(runtimeFolders);
-
-		AssetDatabase.Refresh();
-	}
-
-	private static void CreateFolders(IEnumerable<string> folders)
-	{
-		foreach (var folder in folders)
-			CreateFolderRecursively(folder);
-	}
-
-	private static void CreateFolderRecursively(string folderPath)
-	{
-		if (!AssetDatabase.IsValidFolder(folderPath))
-		{
-			var parentFolder = folderPath[..folderPath.LastIndexOf('/')];
-			if (!AssetDatabase.IsValidFolder(parentFolder))
+			var editorFolders = new[]
 			{
-				CreateFolderRecursively(parentFolder);
-			}
+				$"{mainFolderPath}/Editor/Scripts",
+				$"{mainFolderPath}/Editor/EditorResources"
+			};
 
-			var newFolderName = folderPath[(folderPath.LastIndexOf('/') + 1)..];
-			AssetDatabase.CreateFolder(parentFolder, newFolderName);
-			Debug.Log($"Created folder: {folderPath}");
+			var runtimeFolders = new[]
+			{
+				$"{mainFolderPath}/Runtime/Scenes",
+				$"{mainFolderPath}/Runtime/Scripts",
+				$"{mainFolderPath}/Runtime/Materials",
+				$"{mainFolderPath}/Runtime/Textures",
+				$"{mainFolderPath}/Runtime/Prefabs",
+				$"{mainFolderPath}/Runtime/Audio",
+				$"{mainFolderPath}/Runtime/Animations",
+				$"{mainFolderPath}/Runtime/Fonts",
+				$"{mainFolderPath}/Runtime/Resources",
+				$"{mainFolderPath}/Runtime/ScriptableObjects",
+				$"{mainFolderPath}/Runtime/Scripts/Managers",
+			};
+
+			CreateFolders(editorFolders);
+			CreateFolders(runtimeFolders);
+
+			AssetDatabase.Refresh();
 		}
-		else
+
+		private static void CreateFolders(IEnumerable<string> folders)
 		{
-			Debug.Log($"Folder already exists: {folderPath}");
+			foreach (var folder in folders)
+				CreateFolderRecursively(folder);
+		}
+
+		private static void CreateFolderRecursively(string folderPath)
+		{
+			if (!AssetDatabase.IsValidFolder(folderPath))
+			{
+				var parentFolder = folderPath[..folderPath.LastIndexOf('/')];
+				if (!AssetDatabase.IsValidFolder(parentFolder))
+				{
+					CreateFolderRecursively(parentFolder);
+				}
+
+				var newFolderName = folderPath[(folderPath.LastIndexOf('/') + 1)..];
+				AssetDatabase.CreateFolder(parentFolder, newFolderName);
+				Debug.Log($"Created folder: {folderPath}");
+			}
+			else
+			{
+				Debug.Log($"Folder already exists: {folderPath}");
+			}
 		}
 	}
 }
