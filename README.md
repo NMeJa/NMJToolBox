@@ -9,4 +9,4 @@ EButton by Script Boy: https://assetstore.unity.com/packages/tools/utilities/ebu
 
 EditorToolbox by Kevin Castejon: https://assetstore.unity.com/packages/tools/utilities/editortoolbox-198306
 
-To get This from git URL: https://github.com/NMeJa/NMJToolBox.git
+To get This from git URL: https://github.com/NMeJa/NMJToolBox.git#NMJ_Only
