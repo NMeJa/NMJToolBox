@@ -1,19 +1,14 @@
 {
     "name": "NMJ.NMJToolbox",
     "rootNamespace": "NMJToolbox",
-    "references": [
-        "UltimateEditorEnhancer-Editor",
-        "UltimateEditorEnhancer"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": [
-        "UEE"
-    ],
+    "defineConstraints": [],
     "versionDefines": [],
     "noEngineReferences": false
 }
