@@ -4,7 +4,7 @@ using InfinityCode.UltimateEditorEnhancer.Attributes;
 using UnityEditor;
 using UnityEngine;
 
-namespace DesertWalker.__DesertWalker.Editor.Scripts
+namespace NMJToolBox
 {
 	public static class GameObjectName
 	{
