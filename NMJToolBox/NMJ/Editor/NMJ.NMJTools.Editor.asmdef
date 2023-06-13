@@ -2,7 +2,9 @@
     "name": "NMJ.NMJTools.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:0f0b29311be08be4597b091fd61ae9a7"
+        "GUID:0f0b29311be08be4597b091fd61ae9a7",
+        "UltimateEditorEnhancer-Editor",
+        "UltimateEditorEnhancer"
     ],
     "includePlatforms": [
         "Editor"
@@ -12,7 +14,9 @@
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": [],
+    "defineConstraints": [
+        "UEE"
+    ],
     "versionDefines": [],
     "noEngineReferences": false
 }
