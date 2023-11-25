@@ -22,5 +22,8 @@
     "email": "nmj.gd1@gmail.com",
     "url": "https://github.com/NMeJa/NMJToolBox"
   },
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  },
   "type": "library"
 }
