@@ -4,24 +4,24 @@ using UnityEngine;
 
 namespace NMJToolBox
 {
-    [CustomEditor(typeof(SceneChanger))]
-    public class SceneChangerEditor : UnityEditor.Editor
-    {
-        public override void OnInspectorGUI()
-        {
-            base.OnInspectorGUI();
-            if (!GUILayout.Button("Add Scene To BuildSettings")) return;
-            var asset = serializedObject.FindProperty("sceneAsset");
-            var editorBuildSettingsScenes = (from sceneAsset in EditorBuildSettings.scenes
-                select sceneAsset.path
-                into scenePath
-                where !string.IsNullOrEmpty(scenePath)
-                select new EditorBuildSettingsScene(scenePath, true)).ToList();
+	[CustomEditor(typeof(SceneChanger))]
+	public class SceneChangerEditor : Editor
+	{
+		public override void OnInspectorGUI()
+		{
+			base.OnInspectorGUI();
+			if (!GUILayout.Button("Add Scene To BuildSettings")) return;
+			var asset = serializedObject.FindProperty("sceneAsset");
+			var editorBuildSettingsScenes = (from sceneAsset in EditorBuildSettings.scenes
+			                                 let scenePath = sceneAsset.path
+			                                 where !string.IsNullOrEmpty(scenePath)
+			                                 select new EditorBuildSettingsScene(scenePath, sceneAsset.enabled))
+				.ToList();
 
-            var newScenePath = AssetDatabase.GetAssetPath(asset.objectReferenceValue);
-            editorBuildSettingsScenes.Add(new EditorBuildSettingsScene(newScenePath, true));
-            editorBuildSettingsScenes = editorBuildSettingsScenes.DistinctBy(e => e.path).ToList();
-            EditorBuildSettings.scenes = editorBuildSettingsScenes.ToArray();
-        }
-    }
+			var newScenePath = AssetDatabase.GetAssetPath(asset.objectReferenceValue);
+			if (editorBuildSettingsScenes.Any(scene => scene.path == newScenePath)) return;
+			editorBuildSettingsScenes.Add(new EditorBuildSettingsScene(newScenePath, true));
+			EditorBuildSettings.scenes = editorBuildSettingsScenes.ToArray();
+		}
+	}
 }

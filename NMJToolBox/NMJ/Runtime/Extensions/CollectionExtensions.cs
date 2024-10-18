@@ -6,7 +6,7 @@ namespace NMJToolBox
 {
     public static class CollectionExtensions
     {
-        public static bool IsEmpty<T>(this IEnumerable<T> source) => !source.Any();
+        public static bool IsEmpty<T>(this IEnumerable<T> source) => source is null || !source.Any();
 
         public static IEnumerable<T> DistinctBy<T, TKey>(this IEnumerable<T> items, Func<T, TKey> property)
         {
