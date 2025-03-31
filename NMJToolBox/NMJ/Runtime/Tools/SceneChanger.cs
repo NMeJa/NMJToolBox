@@ -10,6 +10,7 @@ namespace NMJToolBox
 		private UnityEditor.SceneAsset sceneAsset;
 #endif
 
+                [UnityEngine.Serialization.FormerlySerializedAs("sceneName")]
 		[SerializeField]
 		private string scenePath;
 	        public string ScenePath
