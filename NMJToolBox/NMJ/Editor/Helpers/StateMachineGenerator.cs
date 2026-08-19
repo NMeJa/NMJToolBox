@@ -1,12 +1,14 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools
 {
+	[SuppressMessage("ReSharper", "RedundantStringInterpolation")]
 	public class StateMachineGenerator : EditorWindow
 	{
 		private string prefixName = "";
@@ -26,7 +28,7 @@ namespace NMJToolBox
 		[MenuItem("Tools/NMJ/StateMachineGenerator")]
 		public static void ShowWindow()
 		{
-			EditorWindow window = GetWindow(typeof(StateMachineGenerator));
+			var window = GetWindow(typeof(StateMachineGenerator));
 			window.minSize = new Vector2(550, 300);
 			window.titleContent = new GUIContent("StateMachine Generator");
 		}
@@ -49,7 +51,7 @@ namespace NMJToolBox
 			if (prefixName.Length <= 0) return;
 
 			EditorGUILayout.BeginHorizontal();
-			int newCount = Mathf.Max(0, EditorGUILayout.DelayedIntField("Number of states", states.Count));
+			var newCount = Mathf.Max(0, EditorGUILayout.DelayedIntField("Number of states", states.Count));
 			if (GUILayout.Button("-"))
 			{
 				newCount--;
@@ -65,11 +67,11 @@ namespace NMJToolBox
 				states.RemoveAt(states.Count - 1);
 			while (newCount > states.Count)
 				states.Add("    STATE_NAME_" + states.Count);
-			for (int i = 0; i < states.Count; i++)
+			for (var i = 0; i < states.Count; i++)
 			{
 				EditorGUILayout.BeginHorizontal();
 				states[i] = EditorGUILayout.TextField("  State " + i, states[i]).Trim().ToUpper().Replace(" ", "_").Replace("-", "_");
-				bool isDefault = EditorGUILayout.ToggleLeft(defaultState == i ? "Default" : "", defaultState == i);
+				var isDefault = EditorGUILayout.ToggleLeft(defaultState == i ? "Default" : "", defaultState == i);
 				if (isDefault)
 				{
 					defaultState = i;
@@ -98,11 +100,11 @@ namespace NMJToolBox
 					groupByPhase =
 						!EditorGUILayout
 							.ToggleLeft(new GUIContent("Group by state", "Methods will be grouped by state"),
-							            !groupByPhase);
+										!groupByPhase);
 					groupByPhase =
 						EditorGUILayout
 							.ToggleLeft(new GUIContent("Group by phase", "Methods will be grouped by phase (enter/update/exit)"),
-							            groupByPhase);
+										groupByPhase);
 				}
 
 				if (!FileExists())
@@ -128,7 +130,7 @@ namespace NMJToolBox
 
 		private bool FileExists()
 		{
-			string copyPath = Application.dataPath + "/" + prefixName + "StateMachine.cs";
+			var copyPath = Application.dataPath + "/" + prefixName + "StateMachine.cs";
 			return (File.Exists(copyPath));
 		}
 
@@ -139,182 +141,179 @@ namespace NMJToolBox
 				return;
 			}
 
-			string copyPath = Application.dataPath + "/" + prefixName + "StateMachine.cs";
+			var copyPath = Application.dataPath + "/" + prefixName + "StateMachine.cs";
 			if (!FileExists())
 			{
 				// do not overwrite
-				using (StreamWriter outfile =
-				       new StreamWriter(copyPath))
+				using var outfile = new StreamWriter(copyPath);
+				outfile.WriteLine($"using UnityEngine;");
+				if (useFoldoutsOnEvents) outfile.WriteLine($"using NMJToolBox;");
+				if (useUnityEvents) outfile.WriteLine($"using UnityEngine.Events;");
+				outfile.WriteLine($"");
+				if (useRegions) outfile.WriteLine($"#region States");
+				outfile.WriteLine($"public enum {prefixName}State");
+				outfile.WriteLine($"{{");
+				foreach (var state in states)
 				{
-					outfile.WriteLine($"using UnityEngine;");
-					if (useFoldoutsOnEvents) outfile.WriteLine($"using NMJToolBox;");
-					if (useUnityEvents) outfile.WriteLine($"using UnityEngine.Events;");
-					outfile.WriteLine($"");
-					if (useRegions) outfile.WriteLine($"#region States");
-					outfile.WriteLine($"public enum {prefixName}State");
-					outfile.WriteLine($"{{");
-					foreach (string state in states)
-					{
-						outfile.WriteLine($"    {state},");
-					}
-
-					outfile.WriteLine($"}}");
-					outfile.WriteLine($"");
-					if (useRegions) outfile.WriteLine($"#endregion");
-					outfile.WriteLine($"");
-					outfile.WriteLine($"public class {prefixName}StateMachine : MonoBehaviour");
-					outfile.WriteLine($"{{");
-					outfile.WriteLine($"");
-					outfile.WriteLine($"    private {prefixName}State _currentState;");
-					outfile.WriteLine($"");
-					if (useRegions) outfile.WriteLine($"    #region Public properties");
-					outfile.WriteLine($"    public {prefixName}State CurrentState {{ get => _currentState; private set => _currentState = value; }}");
-					if (useRegions) outfile.WriteLine($"    #endregion");
-					if (spaceRegions) outfile.WriteLine($"");
-					if (useRegions) outfile.WriteLine($"    #region Init");
-					outfile.WriteLine($"    private void Start()");
-					outfile.WriteLine($"    {{");
-					outfile.WriteLine($"        TransitionToState(CurrentState, {prefixName}State.{states[defaultState]});");
-					outfile.WriteLine($"    }}");
-					if (useRegions) outfile.WriteLine($"    #endregion");
-					if (spaceRegions) outfile.WriteLine($"");
-					if (useRegions) outfile.WriteLine($"    #region Update");
-					outfile.WriteLine($"    private void Update()");
-					outfile.WriteLine($"    {{");
-					outfile.WriteLine($"        OnStateUpdate(CurrentState);");
-					outfile.WriteLine($"    }}");
-					if (useRegions) outfile.WriteLine($"    #endregion");
-					if (spaceRegions) outfile.WriteLine($"");
-					if (useRegions) outfile.WriteLine($"    #region State Machine");
-					outfile.WriteLine($"    private void OnStateEnter({prefixName}State state)");
-					outfile.WriteLine($"    {{");
-					outfile.WriteLine($"        switch (state)");
-					outfile.WriteLine($"        {{");
-					foreach (string state in states)
-					{
-						string stateMethod = info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "");
-						outfile.WriteLine($"            case {prefixName}State.{state}:");
-						outfile.WriteLine($"                OnEnter{stateMethod}();");
-						outfile.WriteLine($"                break;");
-					}
-
-					outfile.WriteLine($"            default:");
-					outfile.WriteLine($"                Debug.LogError(\"OnStateEnter: Invalid state \" + state.ToString());");
-					outfile.WriteLine($"                break;");
-					outfile.WriteLine($"        }}");
-					outfile.WriteLine($"    }}");
-
-					outfile.WriteLine($"    private void OnStateUpdate({prefixName}State state)");
-					outfile.WriteLine($"    {{");
-					outfile.WriteLine($"        switch (state)");
-					outfile.WriteLine($"        {{");
-					foreach (string state in states)
-					{
-						string stateMethod = info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "");
-						outfile.WriteLine($"            case {prefixName}State.{state}:");
-						outfile.WriteLine($"                OnUpdate{stateMethod}();");
-						outfile.WriteLine($"                break;");
-					}
-
-					outfile.WriteLine($"            default:");
-					outfile.WriteLine($"                Debug.LogError(\"OnStateUpdate: Invalid state \" + state.ToString());");
-					outfile.WriteLine($"                break;");
-					outfile.WriteLine($"        }}");
-					outfile.WriteLine($"    }}");
-					outfile.WriteLine($"    private void OnStateExit({prefixName}State state)");
-					outfile.WriteLine($"    {{");
-					outfile.WriteLine($"        switch (state)");
-					outfile.WriteLine($"        {{");
-					foreach (string state in states)
-					{
-						string stateMethod = info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "");
-						outfile.WriteLine($"            case {prefixName}State.{state}:");
-						outfile.WriteLine($"                OnExit{stateMethod}();");
-						outfile.WriteLine($"                break;");
-					}
-
-					outfile.WriteLine($"            default:");
-					outfile.WriteLine($"                Debug.LogError(\"OnStateExit: Invalid state \" + state.ToString());");
-					outfile.WriteLine($"                break;");
-					outfile.WriteLine($"        }}");
-					outfile.WriteLine($"    }}");
-					outfile.WriteLine($"    private void TransitionToState({prefixName}State fromState, {prefixName}State toState)");
-					outfile.WriteLine($"    {{");
-					outfile.WriteLine($"        OnStateExit(fromState);");
-					outfile.WriteLine($"        CurrentState = toState;");
-					outfile.WriteLine($"        OnStateEnter(toState);");
-					outfile.WriteLine($"    }}");
-
-					outfile.WriteLine($"    private void TransitionToState({prefixName}State toState)");
-					outfile.WriteLine($"    {{");
-					outfile.WriteLine($"        TransitionToState(CurrentState, toState);");
-					outfile.WriteLine($"    }}");
-					if (useRegions) outfile.WriteLine($"    #endregion");
-					if (spaceRegions) outfile.WriteLine($"");
-					if (!groupByPhase)
-					{
-						foreach (string state in states)
-						{
-							string stateMethod = info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "");
-							if (useRegions) outfile.WriteLine($"    #region State {state}");
-							if (useFoldoutsOnEvents) outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
-							if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Enter = new UnityEvent();");
-							if (useFoldoutsOnEvents) outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
-							if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Exit = new UnityEvent();");
-							outfile.WriteLine($"    private void OnEnter{stateMethod}()");
-							outfile.WriteLine($"    {{");
-							if (useUnityEvents) outfile.WriteLine($"        On{stateMethod}Enter?.Invoke();");
-							outfile.WriteLine($"    }}");
-							outfile.WriteLine($"    private void OnUpdate{stateMethod}()");
-							outfile.WriteLine($"    {{");
-							outfile.WriteLine($"    }}");
-							outfile.WriteLine($"    private void OnExit{stateMethod}()");
-							outfile.WriteLine($"    {{");
-							if (useUnityEvents) outfile.WriteLine($"        On{stateMethod}Exit?.Invoke();");
-							outfile.WriteLine($"    }}");
-							if (useRegions) outfile.WriteLine($"    #endregion");
-							if (spaceRegions) outfile.WriteLine($"");
-						}
-					}
-					else
-					{
-						if (useRegions) outfile.WriteLine($"    #region EnterState");
-						foreach (var stateMethod in states.Select(state => info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "")))
-						{
-							if (useFoldoutsOnEvents) outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
-							if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Enter = new UnityEvent();");
-							outfile.WriteLine($"    private void OnEnter{stateMethod}()");
-							outfile.WriteLine($"    {{");
-							if (useUnityEvents) outfile.WriteLine($"        On{stateMethod}Enter?.Invoke();");
-							outfile.WriteLine($"    }}");
-						}
-
-						if (useRegions) outfile.WriteLine($"    #region UpdateState");
-						foreach (var stateMethod in states.Select(state => info
-						                                                   .ToTitleCase(state.Replace("_", " ")
-						                                                                     .ToLower()).Replace(" ", "")))
-						{
-							outfile.WriteLine($"    private void OnUpdate{stateMethod}()");
-							outfile.WriteLine($"    {{");
-							outfile.WriteLine($"    }}");
-						}
-
-						if (useRegions) outfile.WriteLine($"    #region ExitState");
-						foreach (var stateMethod in states.Select(state => info
-						                                                   .ToTitleCase(state.Replace("_", " ")
-						                                                                     .ToLower()).Replace(" ", "")))
-						{
-							if (useFoldoutsOnEvents) outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
-							if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Exit = new UnityEvent();");
-							outfile.WriteLine($"    private void OnExit{stateMethod}()");
-							outfile.WriteLine($"    {{");
-							if (useUnityEvents) outfile.WriteLine($"        On{stateMethod}Exit?.Invoke();");
-							outfile.WriteLine($"    }}");
-						}
-					}
-
-					outfile.WriteLine($"}}");
+					outfile.WriteLine($"    {state},");
 				}
+
+				outfile.WriteLine($"}}");
+				outfile.WriteLine($"");
+				if (useRegions) outfile.WriteLine($"#endregion");
+				outfile.WriteLine($"");
+				outfile.WriteLine($"public class {prefixName}StateMachine : MonoBehaviour");
+				outfile.WriteLine($"{{");
+				outfile.WriteLine($"");
+				outfile.WriteLine($"    private {prefixName}State _currentState;");
+				outfile.WriteLine($"");
+				if (useRegions) outfile.WriteLine($"    #region Public properties");
+				outfile.WriteLine($"    public {prefixName}State CurrentState {{ get => _currentState; private set => _currentState = value; }}");
+				if (useRegions) outfile.WriteLine($"    #endregion");
+				if (spaceRegions) outfile.WriteLine($"");
+				if (useRegions) outfile.WriteLine($"    #region Init");
+				outfile.WriteLine($"    private void Start()");
+				outfile.WriteLine($"    {{");
+				outfile.WriteLine($"        TransitionToState(CurrentState, {prefixName}State.{states[defaultState]});");
+				outfile.WriteLine($"    }}");
+				if (useRegions) outfile.WriteLine($"    #endregion");
+				if (spaceRegions) outfile.WriteLine($"");
+				if (useRegions) outfile.WriteLine($"    #region Update");
+				outfile.WriteLine($"    private void Update()");
+				outfile.WriteLine($"    {{");
+				outfile.WriteLine($"        OnStateUpdate(CurrentState);");
+				outfile.WriteLine($"    }}");
+				if (useRegions) outfile.WriteLine($"    #endregion");
+				if (spaceRegions) outfile.WriteLine($"");
+				if (useRegions) outfile.WriteLine($"    #region State Machine");
+				outfile.WriteLine($"    private void OnStateEnter({prefixName}State state)");
+				outfile.WriteLine($"    {{");
+				outfile.WriteLine($"        switch (state)");
+				outfile.WriteLine($"        {{");
+				foreach (var state in states)
+				{
+					var stateMethod = info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "");
+					outfile.WriteLine($"            case {prefixName}State.{state}:");
+					outfile.WriteLine($"                OnEnter{stateMethod}();");
+					outfile.WriteLine($"                break;");
+				}
+
+				outfile.WriteLine($"            default:");
+				outfile.WriteLine($"                Debug.LogError(\"OnStateEnter: Invalid state \" + state.ToString());");
+				outfile.WriteLine($"                break;");
+				outfile.WriteLine($"        }}");
+				outfile.WriteLine($"    }}");
+
+				outfile.WriteLine($"    private void OnStateUpdate({prefixName}State state)");
+				outfile.WriteLine($"    {{");
+				outfile.WriteLine($"        switch (state)");
+				outfile.WriteLine($"        {{");
+				foreach (var state in states)
+				{
+					var stateMethod = info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "");
+					outfile.WriteLine($"            case {prefixName}State.{state}:");
+					outfile.WriteLine($"                OnUpdate{stateMethod}();");
+					outfile.WriteLine($"                break;");
+				}
+
+				outfile.WriteLine($"            default:");
+				outfile.WriteLine($"                Debug.LogError(\"OnStateUpdate: Invalid state \" + state.ToString());");
+				outfile.WriteLine($"                break;");
+				outfile.WriteLine($"        }}");
+				outfile.WriteLine($"    }}");
+				outfile.WriteLine($"    private void OnStateExit({prefixName}State state)");
+				outfile.WriteLine($"    {{");
+				outfile.WriteLine($"        switch (state)");
+				outfile.WriteLine($"        {{");
+				foreach (var state in states)
+				{
+					var stateMethod = info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "");
+					outfile.WriteLine($"            case {prefixName}State.{state}:");
+					outfile.WriteLine($"                OnExit{stateMethod}();");
+					outfile.WriteLine($"                break;");
+				}
+
+				outfile.WriteLine($"            default:");
+				outfile.WriteLine($"                Debug.LogError(\"OnStateExit: Invalid state \" + state.ToString());");
+				outfile.WriteLine($"                break;");
+				outfile.WriteLine($"        }}");
+				outfile.WriteLine($"    }}");
+				outfile.WriteLine($"    private void TransitionToState({prefixName}State fromState, {prefixName}State toState)");
+				outfile.WriteLine($"    {{");
+				outfile.WriteLine($"        OnStateExit(fromState);");
+				outfile.WriteLine($"        CurrentState = toState;");
+				outfile.WriteLine($"        OnStateEnter(toState);");
+				outfile.WriteLine($"    }}");
+
+				outfile.WriteLine($"    private void TransitionToState({prefixName}State toState)");
+				outfile.WriteLine($"    {{");
+				outfile.WriteLine($"        TransitionToState(CurrentState, toState);");
+				outfile.WriteLine($"    }}");
+				if (useRegions) outfile.WriteLine($"    #endregion");
+				if (spaceRegions) outfile.WriteLine($"");
+				if (!groupByPhase)
+				{
+					foreach (var state in states)
+					{
+						var stateMethod = info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "");
+						if (useRegions) outfile.WriteLine($"    #region State {state}");
+						if (useFoldoutsOnEvents) outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
+						if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Enter = new UnityEvent();");
+						if (useFoldoutsOnEvents) outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
+						if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Exit = new UnityEvent();");
+						outfile.WriteLine($"    private void OnEnter{stateMethod}()");
+						outfile.WriteLine($"    {{");
+						if (useUnityEvents) outfile.WriteLine($"        On{stateMethod}Enter?.Invoke();");
+						outfile.WriteLine($"    }}");
+						outfile.WriteLine($"    private void OnUpdate{stateMethod}()");
+						outfile.WriteLine($"    {{");
+						outfile.WriteLine($"    }}");
+						outfile.WriteLine($"    private void OnExit{stateMethod}()");
+						outfile.WriteLine($"    {{");
+						if (useUnityEvents) outfile.WriteLine($"        On{stateMethod}Exit?.Invoke();");
+						outfile.WriteLine($"    }}");
+						if (useRegions) outfile.WriteLine($"    #endregion");
+						if (spaceRegions) outfile.WriteLine($"");
+					}
+				}
+				else
+				{
+					if (useRegions) outfile.WriteLine($"    #region EnterState");
+					foreach (var stateMethod in states.Select(state => info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "")))
+					{
+						if (useFoldoutsOnEvents) outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
+						if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Enter = new UnityEvent();");
+						outfile.WriteLine($"    private void OnEnter{stateMethod}()");
+						outfile.WriteLine($"    {{");
+						if (useUnityEvents) outfile.WriteLine($"        On{stateMethod}Enter?.Invoke();");
+						outfile.WriteLine($"    }}");
+					}
+
+					if (useRegions) outfile.WriteLine($"    #region UpdateState");
+					foreach (var stateMethod in states.Select(state => info
+																	   .ToTitleCase(state.Replace("_", " ")
+																						 .ToLower()).Replace(" ", "")))
+					{
+						outfile.WriteLine($"    private void OnUpdate{stateMethod}()");
+						outfile.WriteLine($"    {{");
+						outfile.WriteLine($"    }}");
+					}
+
+					if (useRegions) outfile.WriteLine($"    #region ExitState");
+					foreach (var stateMethod in states.Select(state => info
+																	   .ToTitleCase(state.Replace("_", " ")
+																						 .ToLower()).Replace(" ", "")))
+					{
+						if (useFoldoutsOnEvents) outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
+						if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Exit = new UnityEvent();");
+						outfile.WriteLine($"    private void OnExit{stateMethod}()");
+						outfile.WriteLine($"    {{");
+						if (useUnityEvents) outfile.WriteLine($"        On{stateMethod}Exit?.Invoke();");
+						outfile.WriteLine($"    }}");
+					}
+				}
+
+				outfile.WriteLine($"}}");
 			}
 
 			AssetDatabase.Refresh();

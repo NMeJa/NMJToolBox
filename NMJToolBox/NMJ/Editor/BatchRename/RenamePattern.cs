@@ -1,9 +1,10 @@
 using System;
 using System.Globalization;
 using System.Text;
+using NMJTools.Extensions;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools
 {
 	/// <summary>
 	/// Per-item data a <see cref="RenamePattern"/> token can read.
@@ -11,22 +12,22 @@ namespace NMJToolBox
 	public readonly struct RenameContext
 	{
 		/// <summary>The name entering the pattern step (after trim and find/replace).</summary>
-		public readonly string Name;
+		public string Name { get; }
 
 		/// <summary>Zero-based position of this item in the ordered selection.</summary>
-		public readonly int Index;
+		public int Index { get; }
 
 		/// <summary>Total items in the batch.</summary>
-		public readonly int Total;
+		public int Total { get; }
 
 		/// <summary>Parent GameObject name, or containing folder name for assets.</summary>
-		public readonly string Parent;
+		public string Parent { get; }
 
 		/// <summary>Type name — the asset's type, or the first non-Transform component for GameObjects.</summary>
-		public readonly string TypeName;
+		public string TypeName { get; }
 
 		/// <summary>Asset file extension without the dot. Empty for GameObjects.</summary>
-		public readonly string Extension;
+		public string Extension { get; }
 
 		public RenameContext(string name, int index, int total, string parent, string typeName, string extension)
 		{
@@ -142,24 +143,30 @@ namespace NMJToolBox
 				case "C": return Counter(argText, ctx.Index, defaultStart: 1);
 				case "I": return Counter(argText, ctx.Index, defaultStart: 0);
 
-				case "A": return Letters(argText, ctx.Index, upper: false);
+				case "A":  return Letters(argText, ctx.Index, upper: false);
 				case "AU": return Letters(argText, ctx.Index, upper: true);
 
-				case "T": return ctx.Total.ToString(CultureInfo.InvariantCulture);
-				case "P": return ctx.Parent;
+				case "T":  return ctx.Total.ToString(CultureInfo.InvariantCulture);
+				case "P":  return ctx.Parent;
 				case "TY": return ctx.TypeName;
-				case "E": return ctx.Extension;
+				case "E":  return ctx.Extension;
 
-				case "U": return ctx.Name.ToUpperInvariant();
-				case "L": return ctx.Name.ToLowerInvariant();
+				case "U":  return ctx.Name.ToUpperInvariant();
+				case "L":  return ctx.Name.ToLowerInvariant();
 				case "TC": return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(ctx.Name.ToLowerInvariant());
-				case "B": return ctx.Name.Beautify();
+				case "B":  return ctx.Name.Beautify();
 
 				case "D":
 				{
 					var format = string.IsNullOrWhiteSpace(argText) ? "yyyy-MM-dd" : argText;
-					try { return DateTime.Now.ToString(format, CultureInfo.InvariantCulture); }
-					catch (FormatException) { return "{D:?}"; }
+					try
+					{
+						return DateTime.Now.ToString(format, CultureInfo.InvariantCulture);
+					}
+					catch (FormatException)
+					{
+						return "{D:?}";
+					}
 				}
 
 				// Deliberately echoed back so the preview shows the typo.

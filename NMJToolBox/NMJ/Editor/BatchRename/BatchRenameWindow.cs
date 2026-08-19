@@ -1,9 +1,10 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools
 {
 	/// <summary>
 	/// Batch rename for Hierarchy objects and Project assets.
@@ -77,7 +78,7 @@ namespace NMJToolBox
 		/// <summary>
 		/// Recomputes every preview name. Operations compose in a fixed order — trim, then
 		/// find/replace, then the pattern, then prefix/suffix — and {N} sees the result of the
-		/// steps before it, so a pattern can build on a replace rather than fighting it.
+		/// steps before it, so a pattern can build on a replacement rather than fighting it.
 		/// </summary>
 		private void Recalculate()
 		{
@@ -121,7 +122,7 @@ namespace NMJToolBox
 		}
 
 		/// <summary>
-		/// Case-aware literal replace. Written out rather than using the
+		/// Case-aware literal replace it. Written out rather than using the
 		/// <c>string.Replace(string, string, StringComparison)</c> overload, which only exists on
 		/// .NET Standard 2.1 — a project set to the .NET Framework API compatibility level would
 		/// fail to compile against it.
@@ -341,11 +342,9 @@ namespace NMJToolBox
 
 			try
 			{
-				foreach (var target in targets)
-				{
-					var error = target.Apply();
-					if (!string.IsNullOrEmpty(error)) errors.Add(error);
-				}
+				var renameResults = targets.Select(target => target.Apply());
+				var errorList = renameResults.Where(error => !string.IsNullOrEmpty(error));
+				errors.AddRange(errorList);
 			}
 			finally
 			{

@@ -7,11 +7,11 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 
-namespace NMJToolBox.SceneTools
+namespace NMJTools.SceneTools
 {
 	/// <summary>
 	/// A compact scene tree docked inside the Scene view, so the full Hierarchy window can stay
-	/// closed while you work maximised on the viewport.
+	/// closed while you work maximized on the viewport.
 	///
 	/// Enable it from the Scene view's overlay menu (the ⋮ button, or press <c>`</c>) →
 	/// <b>Mini Hierarchy</b>.
@@ -25,9 +25,9 @@ namespace NMJToolBox.SceneTools
 
 		private readonly struct Row
 		{
-			public readonly Transform Target;
-			public readonly int Depth;
-			public readonly bool HasChildren;
+			public Transform Target { get; }
+			public int Depth { get; }
+			public bool HasChildren { get; }
 
 			public Row(Transform target, int depth, bool hasChildren)
 			{
@@ -38,7 +38,20 @@ namespace NMJToolBox.SceneTools
 		}
 
 		private readonly List<Row> rows = new();
-		private readonly HashSet<int> collapsed = new();
+
+		/// <summary>
+		/// Nodes the user has folded shut, keyed by the Transform itself.
+		///
+		/// Deliberately not keyed by instance id: <c>GetInstanceID</c> is obsolete on current Unity
+		/// (superseded by <c>GetEntityId</c>), and switching to <c>GetEntityId</c> would raise this
+		/// package's minimum Unity version for no benefit. A Unity object is a perfectly good
+		/// dictionary key — its <c>Equals</c>/<c>GetHashCode</c> are well-defined — so the id was
+		/// never buying anything here.
+		///
+		/// Named <c>collapsedNodes</c> rather than <c>collapsed</c> because <see cref="Overlay"/>
+		/// already declares a <c>collapsed</c> property.
+		/// </summary>
+		private readonly HashSet<Transform> collapsedNodes = new();
 
 		private ListView list;
 		private ToolbarSearchField search;
@@ -76,15 +89,15 @@ namespace NMJToolBox.SceneTools
 					var index = list.selectedIndex;
 					if (index < 0 || index >= rows.Count) return;
 					var target = rows[index].Target;
-					if (target != null) Selection.activeGameObject = target.gameObject;
+					if (target) Selection.activeGameObject = target.gameObject;
 				};
 
-			// Double-click frames the object, matching the Hierarchy window's behaviour.
+			// Double-click frames the object, matching the Hierarchy window's behavior.
 			list.RegisterCallback<PointerDownEvent>(evt =>
 				{
 					if (evt.clickCount < 2) return;
 					var view = SceneView.lastActiveSceneView;
-					if (view != null) view.FrameSelected();
+					if (view) view.FrameSelected();
 				});
 
 			root.Add(list);
@@ -151,7 +164,7 @@ namespace NMJToolBox.SceneTools
 			// Searching produces a flat result list, so indentation would be misleading.
 			indent.style.width = string.IsNullOrEmpty(filter) ? row.Depth * 12 : 0;
 
-			if (target == null)
+			if (!target)
 			{
 				label.text = "<destroyed>";
 				foldout.text = string.Empty;
@@ -159,7 +172,7 @@ namespace NMJToolBox.SceneTools
 				return;
 			}
 
-			var isCollapsed = collapsed.Contains(target.gameObject.GetInstanceID());
+			var isCollapsed = collapsedNodes.Contains(target);
 			foldout.text = row.HasChildren && string.IsNullOrEmpty(filter) ? (isCollapsed ? "▶" : "▼") : string.Empty;
 
 			// Clicking the arrow must not also select the row, so the toggle is bound to the arrow
@@ -181,8 +194,7 @@ namespace NMJToolBox.SceneTools
 		{
 			if (evt.currentTarget is not Label { userData: Transform target }) return;
 
-			var id = target.gameObject.GetInstanceID();
-			if (!collapsed.Add(id)) collapsed.Remove(id);
+			if (!collapsedNodes.Add(target)) collapsedNodes.Remove(target);
 
 			evt.StopPropagation();
 			Rebuild();
@@ -193,8 +205,13 @@ namespace NMJToolBox.SceneTools
 			rows.Clear();
 			truncated = false;
 
+			// Holding Transforms keeps their managed wrappers alive after the native objects are gone,
+			// so entries left behind by a scene unloaded would accumulate for the session. Cheap to
+			// sweep here: the set only ever holds nodes the user actually folded.
+			collapsedNodes.RemoveWhere(node => !node);
+
 			var prefabStage = PrefabStageUtility.GetCurrentPrefabStage();
-			if (prefabStage != null)
+			if (prefabStage)
 			{
 				// In prefab isolation mode the scene roots are irrelevant — show what's being edited.
 				Walk(prefabStage.prefabContentsRoot.transform, 0);
@@ -243,7 +260,7 @@ namespace NMJToolBox.SceneTools
 
 			// While filtering, descend through everything so a deep match is still found even if its
 			// ancestors are collapsed or non-matching.
-			var descend = !string.IsNullOrEmpty(filter) || !collapsed.Contains(t.gameObject.GetInstanceID());
+			var descend = !string.IsNullOrEmpty(filter) || !collapsedNodes.Contains(t);
 			if (!hasChildren || !descend) return;
 
 			for (var i = 0; i < t.childCount; i++)
@@ -255,7 +272,7 @@ namespace NMJToolBox.SceneTools
 			if (list == null) return;
 
 			var active = Selection.activeGameObject;
-			if (active == null)
+			if (!active)
 			{
 				list.SetSelectionWithoutNotify(System.Array.Empty<int>());
 				return;
@@ -263,7 +280,7 @@ namespace NMJToolBox.SceneTools
 
 			for (var i = 0; i < rows.Count; i++)
 			{
-				if (rows[i].Target == null || rows[i].Target.gameObject != active) continue;
+				if (!rows[i].Target || rows[i].Target.gameObject != active) continue;
 				list.SetSelectionWithoutNotify(new[] { i });
 				list.ScrollToItem(i);
 				return;

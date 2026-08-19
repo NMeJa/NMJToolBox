@@ -1,27 +1,32 @@
+using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools.Gizmos
 {
 	/// <summary>
 	/// Shapes <see cref="Gizmos"/> does not provide. Call these from <c>OnDrawGizmos</c> /
 	/// <c>OnDrawGizmosSelected</c>; they respect <see cref="Gizmos.color"/> and
 	/// <see cref="Gizmos.matrix"/> like the built-ins.
 	///
-	/// <see cref="Gizmos"/> gives you cube, sphere, ray, line, frustum and icon — which leaves out
+	/// <see cref="Gizmos"/> gives you cube, sphere, ray, line, frustum, and icon — which leaves out
 	/// the shapes tools actually need most: direction arrows, capsules matching a
 	/// <see cref="CapsuleCollider"/>, arcs for cones of vision, and text.
 	/// </summary>
+	[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+	// ReSharper disable once UnusedType.Global
 	public static class GizmoUtils
 	{
-		/// <summary>Line with an arrowhead, for directions, forces and links between objects.</summary>
+		/// <summary>Line with an arrowhead, for directions, forces, and links between objects.</summary>
+		/// <param name="from">The starting point of the arrow shaft.</param>
+		/// <param name="to">The target point where the arrowhead points.</param>
 		/// <param name="headLength">
-		/// Length of the head measured back along the shaft. Clamped to half the arrow's length, so a
+		/// The length of the head measured back along the shaft. Clamped to half the arrow's length, so a
 		/// head can never overshoot <paramref name="from"/> and render pointing the wrong way.
 		/// </param>
 		/// <param name="headAngle">Half-angle of the head in degrees.</param>
 		public static void DrawArrow(Vector3 from, Vector3 to, float headLength = 0.25f, float headAngle = 22f)
 		{
-			Gizmos.DrawLine(from, to);
+			UnityEngine.Gizmos.DrawLine(from, to);
 
 			var direction = to - from;
 			var distance = direction.magnitude;
@@ -42,8 +47,8 @@ namespace NMJToolBox
 			var reference = Mathf.Abs(Vector3.Dot(direction, Vector3.up)) > 0.99f ? Vector3.right : Vector3.up;
 			var side = Vector3.Cross(direction, reference).normalized;
 
-			// direction and side are perpendicular unit vectors, so their cross product is unit length
-			// by construction — normalising it would be a square root per draw call for nothing.
+			// direction and side are perpendicular unit vectors, so their cross-product is unit length
+			// by construction — normalizing it would be a square root per-draw call for nothing.
 			var headUp = Vector3.Cross(direction, side);
 
 			var basePoint = to - direction * length;
@@ -53,17 +58,17 @@ namespace NMJToolBox
 			var top = basePoint + headUp * spread;
 			var bottom = basePoint - headUp * spread;
 
-			Gizmos.DrawLine(to, right);
-			Gizmos.DrawLine(to, left);
-			Gizmos.DrawLine(to, top);
-			Gizmos.DrawLine(to, bottom);
+			UnityEngine.Gizmos.DrawLine(to, right);
+			UnityEngine.Gizmos.DrawLine(to, left);
+			UnityEngine.Gizmos.DrawLine(to, top);
+			UnityEngine.Gizmos.DrawLine(to, bottom);
 
 			// Closing the base into a diamond makes the head read as a solid pyramid from glancing
 			// angles, where four loose fins collapse into an ambiguous cross.
-			Gizmos.DrawLine(right, top);
-			Gizmos.DrawLine(top, left);
-			Gizmos.DrawLine(left, bottom);
-			Gizmos.DrawLine(bottom, right);
+			UnityEngine.Gizmos.DrawLine(right, top);
+			UnityEngine.Gizmos.DrawLine(top, left);
+			UnityEngine.Gizmos.DrawLine(left, bottom);
+			UnityEngine.Gizmos.DrawLine(bottom, right);
 		}
 
 		/// <summary>
@@ -90,8 +95,8 @@ namespace NMJToolBox
 			var reference = Mathf.Abs(Vector3.Dot(axis, Vector3.up)) > 0.99f ? Vector3.right : Vector3.up;
 			var right = Vector3.Cross(axis, reference).normalized * radius;
 
-			// axis is unit and right is perpendicular to it with magnitude radius, so this cross
-			// product already has magnitude radius — normalising and rescaling it would be a wasted
+			// axis is unit and right is perpendicular to it with magnitude radius, so this cross-
+			// product already has magnitude radius — normalizing and rescaling it would be a wasted
 			// square root.
 			var forward = Vector3.Cross(axis, right);
 
@@ -100,7 +105,7 @@ namespace NMJToolBox
 			{
 				var angle = i / (float)segments * Mathf.PI * 2f;
 				var next = centre + right * Mathf.Cos(angle) + forward * Mathf.Sin(angle);
-				Gizmos.DrawLine(previous, next);
+				UnityEngine.Gizmos.DrawLine(previous, next);
 				previous = next;
 			}
 		}
@@ -131,10 +136,10 @@ namespace NMJToolBox
 			DrawCircle(top, up, radius, segments);
 			DrawCircle(bottom, up, radius, segments);
 
-			Gizmos.DrawLine(top + right * radius, bottom + right * radius);
-			Gizmos.DrawLine(top - right * radius, bottom - right * radius);
-			Gizmos.DrawLine(top + forward * radius, bottom + forward * radius);
-			Gizmos.DrawLine(top - forward * radius, bottom - forward * radius);
+			UnityEngine.Gizmos.DrawLine(top + right * radius, bottom + right * radius);
+			UnityEngine.Gizmos.DrawLine(top - right * radius, bottom - right * radius);
+			UnityEngine.Gizmos.DrawLine(top + forward * radius, bottom + forward * radius);
+			UnityEngine.Gizmos.DrawLine(top - forward * radius, bottom - forward * radius);
 
 			DrawArc(top, up, right, 180f, radius, segments / 2);
 			DrawArc(top, up, forward, 180f, radius, segments / 2);
@@ -142,20 +147,23 @@ namespace NMJToolBox
 			DrawArc(bottom, -up, forward, 180f, radius, segments / 2);
 		}
 
-		/// <summary>
-		/// Arc starting at <paramref name="from"/> and bending toward <paramref name="towards"/>.
-		/// </summary>
+		/// <summary> Arc starting at <paramref name="from"/> and bending toward <paramref name="towards"/>. </summary>
+		/// <param name="centre">The center point of the arc in 3D space.</param>
 		/// <param name="towards">
 		/// The direction the arc bulges into — <em>not</em> the rotation axis. For a hemisphere cap,
 		/// pass the capsule's up vector and the radial direction to start from; the rotation axis is
 		/// derived from the two.
 		/// </param>
+		/// <param name="from">The initial radial direction pointing outward from the center.</param>
+		/// <param name="degrees">The total angular sweep of the arc in degrees.</param>
+		/// <param name="radius">The radius of the arc.</param>
+		/// <param name="segments">The number of linear subdivisions used to approximate the arc curve.</param>
 		public static void DrawArc(Vector3 centre, Vector3 towards, Vector3 from, float degrees, float radius, int segments = 16)
 		{
 			if (segments < 1) segments = 1;
 
 			// Loop-invariant: the rotation axis depends only on the two direction arguments, so
-			// computing it per segment cost a cross product and a square root on every iteration.
+			// computing it per segment cost a cross-product and a square root on every iteration.
 			var rotationAxis = Vector3.Cross(towards, from);
 			if (rotationAxis.sqrMagnitude < 1e-8f) return; // parallel inputs describe no arc
 			rotationAxis.Normalize();
@@ -167,12 +175,12 @@ namespace NMJToolBox
 			{
 				var rotation = Quaternion.AngleAxis(degrees * i / segments, rotationAxis);
 				var next = centre + rotation * start;
-				Gizmos.DrawLine(previous, next);
+				UnityEngine.Gizmos.DrawLine(previous, next);
 				previous = next;
 			}
 		}
 
-		/// <summary>Cone of vision — the shape you want for FOV, spotlights and detection ranges.</summary>
+		/// <summary>Cone of vision — the shape you want for FOV, spotlights, and detection ranges.</summary>
 		public static void DrawViewCone(Vector3 origin, Vector3 direction, float angleDegrees, float distance, int segments = 24)
 		{
 			if (direction.sqrMagnitude < 1e-8f) return;
@@ -185,15 +193,15 @@ namespace NMJToolBox
 			var left = Quaternion.AngleAxis(-half, side) * direction * distance;
 			var right = Quaternion.AngleAxis(half, side) * direction * distance;
 
-			Gizmos.DrawLine(origin, origin + left);
-			Gizmos.DrawLine(origin, origin + right);
+			UnityEngine.Gizmos.DrawLine(origin, origin + left);
+			UnityEngine.Gizmos.DrawLine(origin, origin + right);
 
 			var previous = origin + left;
 			for (var i = 1; i <= segments; i++)
 			{
 				var angle = Mathf.Lerp(-half, half, i / (float)segments);
 				var next = origin + Quaternion.AngleAxis(angle, side) * direction * distance;
-				Gizmos.DrawLine(previous, next);
+				UnityEngine.Gizmos.DrawLine(previous, next);
 				previous = next;
 			}
 		}
@@ -202,12 +210,12 @@ namespace NMJToolBox
 		public static void DrawCross(Vector3 position, float size = 0.25f)
 		{
 			var half = size * 0.5f;
-			Gizmos.DrawLine(position - Vector3.right * half, position + Vector3.right * half);
-			Gizmos.DrawLine(position - Vector3.up * half, position + Vector3.up * half);
-			Gizmos.DrawLine(position - Vector3.forward * half, position + Vector3.forward * half);
+			UnityEngine.Gizmos.DrawLine(position - Vector3.right * half, position + Vector3.right * half);
+			UnityEngine.Gizmos.DrawLine(position - Vector3.up * half, position + Vector3.up * half);
+			UnityEngine.Gizmos.DrawLine(position - Vector3.forward * half, position + Vector3.forward * half);
 		}
 
-		public static void DrawBounds(Bounds bounds) => Gizmos.DrawWireCube(bounds.center, bounds.size);
+		public static void DrawBounds(Bounds bounds) => UnityEngine.Gizmos.DrawWireCube(bounds.center, bounds.size);
 
 		/// <summary>
 		/// A polyline through the points, optionally closed. Handy for patrol routes and splines.
@@ -216,15 +224,15 @@ namespace NMJToolBox
 		{
 			if (points == null || points.Count < 2) return;
 
-			for (var i = 0; i < points.Count - 1; i++) Gizmos.DrawLine(points[i], points[i + 1]);
-			if (closed) Gizmos.DrawLine(points[^1], points[0]);
+			for (var i = 0; i < points.Count - 1; i++) UnityEngine.Gizmos.DrawLine(points[i], points[i + 1]);
+			if (closed) UnityEngine.Gizmos.DrawLine(points[^1], points[0]);
 
 			if (nodeSize <= 0f) return;
-			foreach (var point in points) Gizmos.DrawWireCube(point, Vector3.one * nodeSize);
+			foreach (var point in points) UnityEngine.Gizmos.DrawWireCube(point, Vector3.one * nodeSize);
 		}
 
 		/// <summary>
-		/// Text label in the scene. Editor-only — <c>Handles</c> does not exist in a player build, so
+		/// Text label in the scene. Editor-only — <c>Handles</c> do not exist in a player build, so
 		/// in a build this compiles to nothing rather than breaking the call site.
 		/// </summary>
 		public static void DrawLabel(Vector3 position, string text)

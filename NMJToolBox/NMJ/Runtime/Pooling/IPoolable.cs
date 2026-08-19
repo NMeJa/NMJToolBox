@@ -1,4 +1,6 @@
-namespace NMJToolBox
+using System.Diagnostics.CodeAnalysis;
+
+namespace NMJTools.Pooling
 {
 	/// <summary>
 	/// Optional interface for pooled prefabs that need to reset state between uses.
@@ -11,6 +13,8 @@ namespace NMJToolBox
 	/// Implemented on any component of the prefab (including children); the pool searches the whole
 	/// instance with <c>GetComponentsInChildren</c> once, at creation, and caches the result.
 	/// </summary>
+	[SuppressMessage("ReSharper", "UnusedMember.Global")]
+	// ReSharper disable once UnusedType.Global
 	public interface IPoolable
 	{
 		/// <summary>Called after the instance has been positioned, parented and activated.</summary>

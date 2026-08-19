@@ -1,20 +1,20 @@
-namespace NMJToolBox
+namespace NMJTools.Patterns.StateMachine
 {
-    public class StateMachine
-    {
-        private State current;
+	public class StateMachine
+	{
+		private State current;
 
-        public StateMachine(State initialState)
-        {
-            current = initialState;
-            current.Enter();
-        }
+		public StateMachine(State initialState)
+		{
+			current = initialState;
+			current.Enter();
+		}
 
-        public void Change(State nextState)
-        {
-            current.Exit();
-            current = nextState;
-            current.Enter();
-        }
-    }
+		public void Change(State nextState)
+		{
+			current.Exit();
+			current = nextState;
+			current.Enter();
+		}
+	}
 }

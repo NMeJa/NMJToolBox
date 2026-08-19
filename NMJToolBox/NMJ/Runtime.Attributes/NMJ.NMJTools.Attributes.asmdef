@@ -1,6 +1,6 @@
 {
     "name": "NMJ.NMJTools.Attributes",
-    "rootNamespace": "NMJToolBox",
+    "rootNamespace": "NMJTools",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],

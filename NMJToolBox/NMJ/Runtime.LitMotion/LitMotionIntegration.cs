@@ -1,13 +1,15 @@
 using LitMotion;
 using LitMotion.Extensions;
+using NMJTools.Pooling;
 using UnityEngine;
+using UnityEngine.Audio;
 
-namespace NMJToolBox
+namespace NMJTools
 {
 	/// <summary>
 	/// Tweened spawn and despawn for pooled objects.
 	///
-	/// Only compiles when <c>NMJ_LITMOTION</c> is set, which <see cref="Setup.PackageDetector"/> does
+	/// Only compiles when <c>NMJ_LITMOTION</c> is set, which <see cref="GeneratorInstance.Setup.PackageDetector"/> does
 	/// while LitMotion is in the project. The core assembly never references LitMotion.
 	/// </summary>
 	[AddComponentMenu("NMJ/Pooling/Motion Return To Pool")]

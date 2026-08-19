@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools.Pooling
 {
 	/// <summary>
 	/// Added automatically to every instance a <see cref="PrefabPool"/> creates. It is what lets
@@ -32,6 +32,7 @@ namespace NMJToolBox
 		/// Returns this instance to its pool. Safe to wire directly to a UnityEvent, so a prefab can
 		/// despawn itself from an Animation Event, a Button, or a collision callback with no code.
 		/// </summary>
+		// ReSharper disable once UnusedMember.Global
 		public void Despawn()
 		{
 			PoolManager.Despawn(gameObject);

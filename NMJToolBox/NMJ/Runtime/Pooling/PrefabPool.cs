@@ -2,12 +2,12 @@ using System;
 using UnityEngine;
 using UnityEngine.Pool;
 
-namespace NMJToolBox
+namespace NMJTools.Pooling
 {
 	/// <summary>
 	/// One inspector-configurable prefab pool. A thin, Unity-lifecycle-aware wrapper around
 	/// <see cref="ObjectPool{T}"/> (built into Unity since 2021.1) — this type deliberately does not
-	/// reimplement pooling, it only adds the parts <see cref="ObjectPool{T}"/> leaves to the caller:
+	/// reimplement pooling; it only adds the parts <see cref="ObjectPool{T}"/> leaves to the caller:
 	/// instantiation, activation ordering, parenting, and the <see cref="IPoolable"/> callbacks.
 	///
 	/// Serialized as a plain field, so a list of these on <see cref="PoolManager"/> is fully
@@ -36,7 +36,7 @@ namespace NMJToolBox
 		private bool initialised;
 
 		/// <summary>Lookup name. Falls back to the prefab's name when the id field is blank.</summary>
-		public string Id => string.IsNullOrWhiteSpace(id) ? (prefab ? prefab.name : "<no prefab>") : id;
+		public string Id => string.IsNullOrWhiteSpace(id) ? prefab ? prefab.name : "<no prefab>" : id;
 
 		public GameObject Prefab => prefab;
 
@@ -71,14 +71,14 @@ namespace NMJToolBox
 
 		/// <summary>
 		/// Builds the underlying <see cref="ObjectPool{T}"/> and pre-warms it. Safe to call twice —
-		/// the second call is a no-op — because a pool may be initialised either by
+		/// the second call is a no-op — because a pool may be initialized either by
 		/// <see cref="PoolManager"/> at startup or lazily by the first spawn.
 		/// </summary>
 		/// <param name="parent">Transform that inactive instances are parked under.</param>
 		public void Initialise(Transform parent)
 		{
 			if (initialised) return;
-			if (prefab == null)
+			if (!prefab)
 			{
 				Debug.LogError($"[NMJ] PrefabPool '{id}' has no prefab assigned and was skipped.");
 				return;
@@ -119,7 +119,7 @@ namespace NMJToolBox
 			if (!initialised) return null;
 
 			var instance = pool.Get();
-			if (instance == null) return null;
+			if (!instance) return null;
 
 			var t = instance.transform;
 			t.SetParent(parent, false);
@@ -128,11 +128,13 @@ namespace NMJToolBox
 			instance.SetActive(true);
 
 			var marker = instance.GetComponent<PooledInstance>();
-			if (marker != null)
+			// ReSharper disable once InvertIf
+			if (marker)
 			{
 				marker.IsSpawned = true;
 				var poolables = marker.Poolables;
-				for (var i = 0; i < poolables.Length; i++) poolables[i].OnSpawned();
+				foreach (var poolable in poolables)
+					poolable.OnSpawned();
 			}
 
 			return instance;
@@ -141,10 +143,10 @@ namespace NMJToolBox
 		/// <summary>Returns an instance this pool created. Ignores instances it does not own.</summary>
 		public void Despawn(GameObject instance)
 		{
-			if (!initialised || instance == null) return;
+			if (!initialised || !instance) return;
 
 			var marker = instance.GetComponent<PooledInstance>();
-			if (marker == null || marker.Owner != this)
+			if (!marker || marker.Owner != this)
 			{
 				Debug.LogWarning($"[NMJ] '{instance.name}' was not created by pool '{Id}' and was not returned.", instance);
 				return;
@@ -156,7 +158,8 @@ namespace NMJToolBox
 			marker.IsSpawned = false;
 
 			var poolables = marker.Poolables;
-			for (var i = 0; i < poolables.Length; i++) poolables[i].OnDespawned();
+			foreach (var poolable in poolables)
+				poolable.OnDespawned();
 
 			pool.Release(instance);
 		}
@@ -175,7 +178,7 @@ namespace NMJToolBox
 			instance.SetActive(false);
 
 			var marker = instance.GetComponent<PooledInstance>();
-			if (marker == null) marker = instance.AddComponent<PooledInstance>();
+			if (!marker) marker = instance.AddComponent<PooledInstance>();
 			marker.Bind(this);
 
 			return instance;
@@ -183,14 +186,14 @@ namespace NMJToolBox
 
 		private void OnReturned(GameObject instance)
 		{
-			if (instance == null) return;
+			if (!instance) return;
 			instance.SetActive(false);
 			instance.transform.SetParent(root, false);
 		}
 
 		private static void OnDestroyInstance(GameObject instance)
 		{
-			if (instance != null) UnityEngine.Object.Destroy(instance);
+			if (instance) UnityEngine.Object.Destroy(instance);
 		}
 	}
 }

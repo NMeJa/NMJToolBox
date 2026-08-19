@@ -1,7 +1,8 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools.Pooling
 {
 	/// <summary>
 	/// Scene component that owns a list of <see cref="PrefabPool"/>s configured entirely from the
@@ -15,6 +16,8 @@ namespace NMJToolBox
 	/// </summary>
 	[DefaultExecutionOrder(-50)] // pools must exist before anything tries to spawn in Start
 	[AddComponentMenu("NMJ/Pooling/Pool Manager")]
+	[SuppressMessage("ReSharper", "UnusedMember.Global")]
+	[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 	public class PoolManager : MonoBehaviour
 	{
 		[Tooltip("Survive scene loads. Turn this off for pools that only make sense in one scene.")]
@@ -28,27 +31,26 @@ namespace NMJToolBox
 		private readonly Dictionary<string, PrefabPool> poolsById = new();
 		private readonly Dictionary<GameObject, PrefabPool> poolsByPrefab = new();
 
-		private static PoolManager active;
-
 		/// <summary>
 		/// The manager the static API routes through. Returns null rather than creating one, so a
 		/// missing manager is a loud, findable error instead of a silent second pool hierarchy.
 		/// </summary>
-		public static PoolManager Active => active;
+		// ReSharper disable once MemberCanBePrivate.Global
+		public static PoolManager Active { get; private set; }
 
 		public IReadOnlyList<PrefabPool> Pools => pools;
 
 		private void Awake()
 		{
-			if (active != null && active != this)
+			if (Active && Active != this)
 			{
-				Debug.LogWarning($"[NMJ] A PoolManager is already active ('{active.name}'). " +
+				Debug.LogWarning($"[NMJ] A PoolManager is already active ('{Active.name}'). " +
 								 $"'{name}' will register its pools into it instead of replacing it.", this);
-				foreach (var pool in pools) active.Register(pool);
+				foreach (var pool in pools) Active.Register(pool);
 				return;
 			}
 
-			active = this;
+			Active = this;
 			if (dontDestroyOnLoad) DontDestroyOnLoad(gameObject);
 
 			foreach (var pool in pools) Register(pool);
@@ -56,12 +58,12 @@ namespace NMJToolBox
 
 		private void OnDestroy()
 		{
-			if (active == this) active = null;
+			if (Active == this) Active = null;
 		}
 
 		private void Register(PrefabPool pool)
 		{
-			if (pool?.Prefab == null)
+			if (!pool?.Prefab)
 			{
 				Debug.LogError($"[NMJ] PoolManager '{name}' has a pool entry with no prefab; skipped.", this);
 				return;
@@ -84,13 +86,13 @@ namespace NMJToolBox
 			poolsByPrefab[pool.Prefab] = pool;
 		}
 
-		/// <summary>Finds a pool by its inspector id, or null.</summary>
+		/// <summary>Finds a pool by its inspector id or null.</summary>
 		public PrefabPool GetPool(string id) => poolsById.GetValueOrDefault(id);
 
 		/// <summary>Finds the pool serving a prefab, optionally creating one on demand.</summary>
 		public PrefabPool GetPool(GameObject prefab)
 		{
-			if (prefab == null) return null;
+			if (!prefab) return null;
 			if (poolsByPrefab.TryGetValue(prefab, out var existing)) return existing;
 			if (!autoCreateMissingPools) return null;
 
@@ -106,21 +108,21 @@ namespace NMJToolBox
 		public static GameObject Spawn(string poolId, Vector3 position = default, Quaternion rotation = default, Transform parent = null)
 		{
 			if (!EnsureActive()) return null;
-			var pool = active.GetPool(poolId);
+			var pool = Active.GetPool(poolId);
 			if (pool != null) return pool.Spawn(position, Norm(rotation), parent);
 
-			Debug.LogError($"[NMJ] No pool named '{poolId}' on PoolManager '{active.name}'.", active);
+			Debug.LogError($"[NMJ] No pool named '{poolId}' on PoolManager '{Active.name}'.", Active);
 			return null;
 		}
 
 		public static GameObject Spawn(GameObject prefab, Vector3 position = default, Quaternion rotation = default, Transform parent = null)
 		{
 			if (!EnsureActive()) return null;
-			var pool = active.GetPool(prefab);
+			var pool = Active.GetPool(prefab);
 			if (pool != null) return pool.Spawn(position, Norm(rotation), parent);
 
 			Debug.LogError($"[NMJ] No pool for prefab '{(prefab ? prefab.name : "null")}' and " +
-						   "auto-create is disabled on the active PoolManager.", active);
+						   "auto-create is disabled on the active PoolManager.", Active);
 			return null;
 		}
 
@@ -130,10 +132,10 @@ namespace NMJToolBox
 		/// </summary>
 		public static void Despawn(GameObject instance)
 		{
-			if (instance == null) return;
+			if (!instance) return;
 
 			var marker = instance.GetComponent<PooledInstance>();
-			if (marker == null || marker.Owner == null)
+			if (!marker || marker.Owner == null)
 			{
 				Destroy(instance);
 				return;
@@ -144,14 +146,14 @@ namespace NMJToolBox
 
 		private static bool EnsureActive()
 		{
-			if (active != null) return true;
+			if (Active) return true;
 			Debug.LogError("[NMJ] No active PoolManager in the scene. Add one via " +
 						   "GameObject > NMJ > Pool Manager before spawning.");
 			return false;
 		}
 
-		// A default(Quaternion) is all-zeroes, which is not a valid rotation. Optional parameters
-		// can't default to Quaternion.identity (not a compile-time constant), so normalise here.
+		// A default (Quaternion) is all-zeroes, which is not a valid rotation. Optional parameters
+		// can't default to Quaternion.identity (not a compile-time constant), so normalize here.
 		private static Quaternion Norm(Quaternion rotation) =>
 			rotation is { x: 0f, y: 0f, z: 0f, w: 0f } ? Quaternion.identity : rotation;
 	}

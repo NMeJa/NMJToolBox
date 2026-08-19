@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,16 +6,16 @@ using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 
-namespace NMJToolBox.Setup
+namespace NMJTools.Setup
 {
 	/// <summary>
 	/// One window to bring a fresh project up to the standard package set.
 	///
 	/// What it can and cannot do, plainly: UPM packages (git and OpenUPM) install without any further
-	/// input. Paid Asset Store packages cannot — Unity has no API to buy or download store content,
+	/// input. Paid Asset Store packages cannot — Unity has no API to buy or download store content
 	/// because entitlement is checked server-side against the signed-in account. For those, the
 	/// window looks for a copy already in the per-user Asset Store cache and imports that; failing
-	/// that it opens the store page. Nothing here can conjure a licence.
+	/// that, it opens the store page. Nothing here can conjure a license.
 	/// </summary>
 	public class ProjectSetupWindow : EditorWindow
 	{
@@ -49,7 +48,7 @@ namespace NMJToolBox.Setup
 			DrawFooter();
 		}
 
-		private void DrawHeader()
+		private static void DrawHeader()
 		{
 			EditorGUILayout.Space(6);
 			EditorGUILayout.LabelField("Standard Project Packages", EditorStyles.boldLabel);
@@ -71,15 +70,15 @@ namespace NMJToolBox.Setup
 				if (GUILayout.Button("Re-scan", GUILayout.Width(80))) PackageDetector.Sync(true);
 			}
 
-			var odin = PackageCatalog.All.FirstOrDefault(e => e.DisplayName == "Odin Inspector");
+			var odin = PackageCatalog.All.FirstOrDefault(e => e.displayName == "Odin Inspector");
 			if (odin != null && PackageDetector.IsPresent(odin))
 			{
 				EditorGUI.BeginChangeCheck();
 				PackageDetector.ForceAttributesWithOdin = EditorGUILayout.ToggleLeft(
-					 new GUIContent("Force NMJ attributes alongside Odin",
-									"Both packages define [ReadOnly], [Required] and [Button]. Enabling this makes " +
-									"those names ambiguous wherever both namespaces are imported."),
-					 PackageDetector.ForceAttributesWithOdin);
+																					 new GUIContent("Force NMJ attributes alongside Odin",
+																									"Both packages define [ReadOnly], [Required] and [Button]. Enabling this makes " +
+																									"those names ambiguous wherever both namespaces are imported."),
+																					 PackageDetector.ForceAttributesWithOdin);
 
 				if (EditorGUI.EndChangeCheck()) PackageDetector.Sync(true);
 			}
@@ -87,13 +86,13 @@ namespace NMJToolBox.Setup
 			EditorGUILayout.Space(4);
 		}
 
-		private void DrawSection(string title, params InstallSource[] sources)
+		private void DrawSection(string titleLabel, params InstallSource[] sources)
 		{
-			var entries = PackageCatalog.All.Where(e => sources.Contains(e.Source)).ToList();
+			var entries = PackageCatalog.All.Where(e => sources.Contains(e.source)).ToList();
 			if (entries.Count == 0) return;
 
 			EditorGUILayout.Space(6);
-			EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+			EditorGUILayout.LabelField(titleLabel, EditorStyles.boldLabel);
 
 			foreach (var entry in entries) DrawEntry(entry);
 		}
@@ -113,19 +112,19 @@ namespace NMJToolBox.Setup
 						fontStyle = FontStyle.Bold
 					};
 
-					EditorGUILayout.LabelField($"{icon}  {entry.DisplayName}", style);
+					EditorGUILayout.LabelField($"{icon}  {entry.displayName}", style);
 					GUILayout.FlexibleSpace();
 
-					if (!string.IsNullOrEmpty(entry.Define))
-						EditorGUILayout.LabelField(entry.Define, EditorStyles.miniLabel, GUILayout.Width(190));
+					if (!string.IsNullOrEmpty(entry.define))
+						EditorGUILayout.LabelField(entry.define, EditorStyles.miniLabel, GUILayout.Width(190));
 
 					DrawEntryButton(entry, present);
 				}
 
-				if (!string.IsNullOrEmpty(entry.Notes))
-					EditorGUILayout.LabelField(entry.Notes, EditorStyles.wordWrappedMiniLabel);
+				if (!string.IsNullOrEmpty(entry.notes))
+					EditorGUILayout.LabelField(entry.notes, EditorStyles.wordWrappedMiniLabel);
 
-				if (entry.Source != InstallSource.AssetStore || present) return;
+				if (entry.source != InstallSource.AssetStore || present) return;
 
 				var cachedPath = AssetStoreLocator.FindCachedPackage(entry);
 				EditorGUILayout.LabelField(
@@ -146,7 +145,7 @@ namespace NMJToolBox.Setup
 
 			using (new EditorGUI.DisabledScope(activeRequest != null))
 			{
-				switch (entry.Source)
+				switch (entry.source)
 				{
 					case InstallSource.Git:
 					case InstallSource.OpenUpm:
@@ -162,7 +161,7 @@ namespace NMJToolBox.Setup
 						}
 						else if (GUILayout.Button("Store Page", GUILayout.Width(90)))
 						{
-							Application.OpenURL(entry.Url);
+							Application.OpenURL(entry.url);
 						}
 
 						break;
@@ -199,7 +198,7 @@ namespace NMJToolBox.Setup
 		private void InstallEverything()
 		{
 			var missing = PackageCatalog.All
-										.Where(e => e.Source != InstallSource.AssetStore)
+										.Where(e => e.source != InstallSource.AssetStore)
 										.Where(e => !PackageDetector.IsPresent(e))
 										.ToList();
 
@@ -211,14 +210,14 @@ namespace NMJToolBox.Setup
 			{
 				// The OpenUPM scoped registry has to exist in manifest.json before Client.Add can
 				// resolve a com.tayx.* or com.yasirkula.* name, so it is written first.
-				if (missing.Any(e => e.Source == InstallSource.OpenUpm)) EnsureOpenUpmRegistry(missing);
+				if (missing.Any(e => e.source == InstallSource.OpenUpm)) EnsureOpenUpmRegistry(missing);
 				Enqueue(missing);
 			}
 
 			if (!includeOptional) return;
 
 			var paid = PackageCatalog.All
-									 .Where(e => e.Source == InstallSource.AssetStore)
+									 .Where(e => e.source == InstallSource.AssetStore)
 									 .Where(e => !PackageDetector.IsPresent(e))
 									 .ToList();
 
@@ -226,7 +225,7 @@ namespace NMJToolBox.Setup
 			{
 				var cachedPath = AssetStoreLocator.FindCachedPackage(entry);
 				if (cachedPath != null) AssetDatabase.ImportPackage(cachedPath, true);
-				else Application.OpenURL(entry.Url);
+				else Application.OpenURL(entry.url);
 			}
 		}
 
@@ -241,9 +240,9 @@ namespace NMJToolBox.Setup
 			if (activeRequest != null || installQueue.Count == 0) return;
 
 			var entry = installQueue.Dequeue();
-			statusMessage = $"Installing {entry.DisplayName}…";
+			statusMessage = $"Installing {entry.displayName}…";
 
-			activeRequest = Client.Add(entry.Identifier);
+			activeRequest = Client.Add(entry.identifier);
 			EditorApplication.update += PollRequest;
 		}
 
@@ -274,8 +273,8 @@ namespace NMJToolBox.Setup
 		private void EnsureOpenUpmRegistry(IEnumerable<PackageEntry> entries)
 		{
 			var scopes = entries
-						 .Where(e => e.Source == InstallSource.OpenUpm)
-						 .Select(e => ScopeOf(e.Identifier))
+						 .Where(e => e.source == InstallSource.OpenUpm)
+						 .Select(e => ScopeOf(e.identifier))
 						 .Where(s => !string.IsNullOrEmpty(s))
 						 .Distinct()
 						 .ToList();
@@ -291,7 +290,7 @@ namespace NMJToolBox.Setup
 
 			var text = File.ReadAllText(manifestPath);
 
-			// Hand-editing JSON is unpleasant, but Unity ships no writable manifest API and
+			// Hand-editing JSON is unpleasant, but Unity ships no writable manifest API, and
 			// JsonUtility cannot round-trip the arbitrary shape of a manifest without dropping keys.
 			// Bailing out with a clear message beats silently corrupting the file.
 			if (text.Contains(PackageCatalog.OpenUpmRegistryUrl))

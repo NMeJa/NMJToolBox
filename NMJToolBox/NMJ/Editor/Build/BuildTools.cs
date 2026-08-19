@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -9,7 +8,7 @@ using UnityEditor.Build.Reporting;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
-namespace NMJToolBox
+namespace NMJTools
 {
 	/// <summary>
 	/// Version bumping, timestamped builds, and the folder-opening commands that otherwise mean
@@ -25,7 +24,7 @@ namespace NMJToolBox
 		public static bool AutoIncrementOnBuild
 		{
 			get => EditorPrefs.GetBool(AutoIncrementKey, false);
-			set => EditorPrefs.SetBool(AutoIncrementKey, value);
+			private set => EditorPrefs.SetBool(AutoIncrementKey, value);
 		}
 
 		/// <summary>Folder builds are written into, relative to the project root.</summary>
@@ -47,7 +46,7 @@ namespace NMJToolBox
 		private static void IncrementMajor() => IncrementVersion(0);
 
 		/// <summary>
-		/// Bumps one component of a dotted version and zeroes everything after it. Missing components
+		/// Bumps one part of a dotted version and zeroes everything after it. Missing components
 		/// are treated as zero, so "1.2" bumped at the patch level becomes "1.2.1" rather than failing.
 		/// </summary>
 		public static void IncrementVersion(int componentIndex)
@@ -140,10 +139,10 @@ namespace NMJToolBox
 			return target switch
 			{
 				BuildTarget.StandaloneWindows or BuildTarget.StandaloneWindows64 => product + ".exe",
-				BuildTarget.StandaloneOSX => product + ".app",
-				BuildTarget.StandaloneLinux64 => product + ".x86_64",
-				BuildTarget.Android => product + ".apk",
-				_ => product
+				BuildTarget.StandaloneOSX                                        => product + ".app",
+				BuildTarget.StandaloneLinux64                                    => product + ".x86_64",
+				BuildTarget.Android                                              => product + ".apk",
+				_                                                                => product
 			};
 		}
 

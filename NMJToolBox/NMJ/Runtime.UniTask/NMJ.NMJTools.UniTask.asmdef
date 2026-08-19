@@ -1,6 +1,6 @@
 {
     "name": "NMJ.NMJTools.UniTask",
-    "rootNamespace": "NMJToolBox",
+    "rootNamespace": "NMJTools",
     "references": [
         "NMJ.NMJTools.Runtime",
         "UniTask"

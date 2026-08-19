@@ -1,7 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools.Extensions
 {
+	[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+	[SuppressMessage("ReSharper", "UnusedMember.Global")]
+	// ReSharper disable once UnusedType.Global
 	public static class GameObjectExtensions
 	{
 		/// <summary>
@@ -48,7 +52,7 @@ namespace NMJToolBox
 		/// <summary>Destroys the object, choosing the right call for play mode or the editor.</summary>
 		public static void SafeDestroy(this GameObject gameObject)
 		{
-			if (gameObject == null) return;
+			if (!gameObject) return;
 			if (Application.isPlaying) Object.Destroy(gameObject);
 			else Object.DestroyImmediate(gameObject);
 		}

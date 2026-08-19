@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
-namespace NMJToolBox.SceneTools
+namespace NMJTools.SceneTools
 {
 	/// <summary>
 	/// Records what you have selected so you can step back and forward through it — the browser
@@ -24,7 +25,7 @@ namespace NMJToolBox.SceneTools
 
 		/// <summary>
 		/// Set while stepping through history. Without it, applying a historical selection would
-		/// itself be recorded as a new entry and the history could never move backwards.
+		/// itself be recorded as a new entry, and the history could never move backwards.
 		/// </summary>
 		private static bool navigating;
 
@@ -120,7 +121,7 @@ namespace NMJToolBox.SceneTools
 		{
 			for (var i = entries.Count - 1; i >= 0; i--)
 			{
-				if (entries[i].Any(o => o != null)) continue;
+				if (entries[i].Any(o => o)) continue;
 				entries.RemoveAt(i);
 				if (cursor >= i) cursor--;
 			}
@@ -138,7 +139,7 @@ namespace NMJToolBox.SceneTools
 		{
 			if (index < 0 || index >= entries.Count) return string.Empty;
 
-			var alive = entries[index].Where(o => o != null).ToArray();
+			var alive = entries[index].Where(o => o).ToArray();
 			if (alive.Length == 0) return "<destroyed>";
 			return alive.Length == 1 ? alive[0].name : $"{alive[0].name} +{alive.Length - 1}";
 		}

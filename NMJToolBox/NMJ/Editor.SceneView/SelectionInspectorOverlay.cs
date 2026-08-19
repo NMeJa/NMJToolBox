@@ -4,13 +4,13 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace NMJToolBox.SceneTools
+namespace NMJTools.SceneTools
 {
 	/// <summary>
 	/// The selected object's inspector, docked inside the Scene view — the other half of working
-	/// with the viewport maximised.
+	/// with the viewport maximized.
 	///
-	/// Built from <see cref="InspectorElement"/>, so every custom editor, property drawer and
+	/// Built from <see cref="InspectorElement"/>, so every custom editor, property drawer, and
 	/// attribute in the project renders exactly as it does in the real Inspector window; this is a
 	/// second view onto the same machinery, not a reimplementation of it.
 	///
@@ -50,7 +50,7 @@ namespace NMJToolBox.SceneTools
 			body.Clear();
 
 			var active = Selection.activeObject;
-			if (active == null)
+			if (!active)
 			{
 				body.Add(Hint("Nothing selected."));
 				return;
@@ -81,7 +81,7 @@ namespace NMJToolBox.SceneTools
 			var components = go.GetComponents<Component>();
 			foreach (var component in components)
 			{
-				if (component == null)
+				if (!component)
 				{
 					body.Add(Hint("Missing script"));
 					continue;

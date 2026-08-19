@@ -1,8 +1,8 @@
 {
     "name": "NMJ.NMJTools.Editor",
-    "rootNamespace": "",
+    "rootNamespace": "NMJTools",
     "references": [
-        "GUID:0f0b29311be08be4597b091fd61ae9a7"
+        "GUID:ab92a53fae28a934b8b952c281899f57"
     ],
     "includePlatforms": [
         "Editor"

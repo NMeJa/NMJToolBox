@@ -111,7 +111,7 @@ namespace NMJToolBox
 
 		private static bool HasSelectedAncestor(Transform t, HashSet<Transform> selection)
 		{
-			for (var p = t.parent; p != null; p = p.parent)
+			for (var p = t.parent; p; p = p.parent)
 				if (selection.Contains(p))
 					return true;
 
@@ -129,9 +129,9 @@ namespace NMJToolBox
 		}
 
 		/// <summary>
-		/// Centre of the selection's renderer bounds, falling back to the average pivot when nothing
+		/// Center of the selection's renderer bounds, falling back to the average pivot when nothing
 		/// selected has a renderer. Putting the pivot in the middle is what makes the collection
-		/// usable as a rotation/scale handle afterwards.
+		/// usable as a rotation/scale handle afterward.
 		/// </summary>
 		private static Vector3 BoundsCentre(IReadOnlyList<Transform> transforms)
 		{

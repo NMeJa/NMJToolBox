@@ -1,9 +1,10 @@
 {
     "name": "NMJ.NMJTools.LitMotion",
-    "rootNamespace": "NMJToolBox",
+    "rootNamespace": "NMJTools",
     "references": [
         "NMJ.NMJTools.Runtime",
-        "LitMotion"
+        "LitMotion",
+        "LitMotion.Extensions"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

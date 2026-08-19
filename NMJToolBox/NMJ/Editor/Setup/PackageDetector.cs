@@ -6,7 +6,7 @@ using UnityEditor.Build;
 using UnityEditor.Callbacks;
 using UnityEngine;
 
-namespace NMJToolBox.Setup
+namespace NMJTools.Setup
 {
 	/// <summary>
 	/// Detects which of the catalogued packages are in the project and keeps the matching scripting
@@ -33,7 +33,7 @@ namespace NMJToolBox.Setup
 		[DidReloadScripts]
 		private static void OnScriptsReloaded() => EditorApplication.delayCall += () => Sync(false);
 
-		/// <summary>Whether defines are updated automatically after every recompile.</summary>
+		/// <summary>Whether defines are updated automatically after every recompiling.</summary>
 		public static bool AutoManage
 		{
 			get => EditorPrefs.GetBool(AutoManageKey, true);
@@ -59,10 +59,10 @@ namespace NMJToolBox.Setup
 
 			var loaded = LoadedAssemblyNames();
 
-			if (entry.Assemblies.Any(loaded.Contains)) return true;
+			if (entry.assemblies.Any(loaded.Contains)) return true;
 
-			return entry.Types.Length > 0 &&
-				   entry.Types.Any(typeName => FindType(typeName) != null);
+			return entry.types.Length > 0 &&
+				   entry.types.Any(typeName => FindType(typeName) != null);
 		}
 
 		private static HashSet<string> cachedAssemblyNames;
@@ -85,14 +85,20 @@ namespace NMJToolBox.Setup
 			return AppDomain.CurrentDomain.GetAssemblies()
 							.Select(assembly =>
 								{
-									try { return assembly.GetType(fullName); }
-									catch { return null; }
+									try
+									{
+										return assembly.GetType(fullName);
+									}
+									catch
+									{
+										return null;
+									}
 								})
 							.FirstOrDefault(type => type != null);
 		}
 
 		/// <summary>
-		/// Recomputes every managed define and writes them back if anything changed.
+		/// Recomputes every managed definition and writes them back if anything changed.
 		/// </summary>
 		/// <param name="verbose">Log what changed. Off for the automatic pass, on when run by hand.</param>
 		public static void Sync(bool verbose)
@@ -114,17 +120,17 @@ namespace NMJToolBox.Setup
 
 			foreach (var entry in PackageCatalog.All)
 			{
-				if (string.IsNullOrEmpty(entry.Define)) continue;
+				if (string.IsNullOrEmpty(entry.define)) continue;
 
-				managed.Add(entry.Define);
-				if (IsPresent(entry)) wanted.Add(entry.Define);
+				managed.Add(entry.define);
+				if (IsPresent(entry)) wanted.Add(entry.define);
 			}
 
-			// NMJ's own attributes are the one define driven by an *absence*: they exist to fill the
+			// NMJ's own attributes are the one definition driven by an *absence*: they exist to fill the
 			// gap Odin would otherwise fill, so they switch off the moment Odin appears.
 			managed.Add(PackageCatalog.NmjAttributesDefine);
 			var odinPresent = before.Contains(PackageCatalog.OdinDefine) ||
-							  PackageCatalog.All.Any(e => e.DisplayName == "Odin Inspector" && IsPresent(e));
+							  PackageCatalog.All.Any(e => e.displayName == "Odin Inspector" && IsPresent(e));
 
 			if (!odinPresent || ForceAttributesWithOdin)
 				wanted.Add(PackageCatalog.NmjAttributesDefine);
@@ -142,7 +148,7 @@ namespace NMJToolBox.Setup
 			var added = after.Except(before).ToList();
 			var removed = before.Except(after).ToList();
 
-			// Writing defines triggers a recompile, which re-enters this method. Only ever writing on
+			// Writing definitions triggers a recompiling, which re-enters this method. Only ever writing on
 			// an actual change is what stops that from looping forever.
 			PlayerSettings.SetScriptingDefineSymbols(namedTarget, after.OrderBy(d => d).ToArray());
 
@@ -152,6 +158,7 @@ namespace NMJToolBox.Setup
 			Debug.Log($"[NMJ] Package defines updated: {string.Join("  ", summary)}");
 		}
 
+		// ReSharper disable once MemberCanBePrivate.Global
 		internal static NamedBuildTarget CurrentNamedBuildTarget() =>
 			NamedBuildTarget.FromBuildTargetGroup(EditorUserBuildSettings.selectedBuildTargetGroup);
 

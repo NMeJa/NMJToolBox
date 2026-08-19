@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools
 {
 	/// <summary>
 	/// Shows a field in the inspector but blocks editing. Useful for values written by code that you

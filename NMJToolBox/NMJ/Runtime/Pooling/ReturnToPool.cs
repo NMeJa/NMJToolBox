@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools.Pooling
 {
 	/// <summary>
 	/// Put this on a pooled prefab to send it home automatically — the despawn half of a no-code
@@ -8,7 +8,7 @@ namespace NMJToolBox
 	/// anyone writing a coroutine.
 	///
 	/// The timer restarts on every spawn because <c>OnEnable</c> runs each time the pool hands the
-	/// instance out, which is exactly the behaviour a pooled object needs and the reason a plain
+	/// instance out, which is exactly the behavior a pooled object needs and the reason a plain
 	/// <c>Destroy(go, t)</c> in <c>Start</c> does not work once an object is pooled.
 	/// </summary>
 	[AddComponentMenu("NMJ/Pooling/Return To Pool")]
@@ -51,14 +51,16 @@ namespace NMJToolBox
 
 			if (!whenParticlesFinished || particles == null || particles.Length == 0) return;
 
-			for (var i = 0; i < particles.Length; i++)
-				if (particles[i] != null && particles[i].IsAlive(true))
+			// ReSharper disable once LoopCanBeConvertedToQuery
+			foreach (var particle in particles)
+				if (particle && particle.IsAlive(true))
 					return;
 
 			Return();
 		}
 
 		/// <summary>Returns this instance to its pool now. Wire this into a UnityEvent.</summary>
+		// ReSharper disable once MemberCanBePrivate.Global
 		public void Return()
 		{
 			waiting = false;

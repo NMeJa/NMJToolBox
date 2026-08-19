@@ -1,7 +1,8 @@
+using NMJTools.Extensions;
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools
 {
 	/// <summary>
 	/// Renames a GameObject after the component you invoke this on, using the beautified type name
@@ -42,12 +43,13 @@ namespace NMJToolBox
 		/// name. Registers an Undo step and flags the scene dirty, so the change survives a
 		/// domain reload and can be reverted with Ctrl+Z.
 		/// </summary>
+		// ReSharper disable once MemberCanBePrivate.Global
 		public static void Rename(Component component)
 		{
-			if (component == null) return;
+			if (!component) return;
 
-			GameObject gameObject = component.gameObject;
-			string newName = GetDisplayName(component);
+			var gameObject = component.gameObject;
+			var newName = GetDisplayName(component);
 			if (gameObject.name == newName) return;
 
 			Undo.RecordObject(gameObject, $"Rename to {newName}");

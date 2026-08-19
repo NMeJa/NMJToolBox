@@ -1,10 +1,8 @@
 using UnityEditor;
 using UnityEditor.Overlays;
-using UnityEditor.SceneManagement;
-using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace NMJToolBox.SceneTools
+namespace NMJTools.SceneTools
 {
 	/// <summary>
 	/// Solo/hide controls for the Scene view.

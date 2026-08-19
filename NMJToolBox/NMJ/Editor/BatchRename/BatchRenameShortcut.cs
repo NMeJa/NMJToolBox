@@ -2,7 +2,7 @@ using UnityEditor;
 using UnityEditor.ShortcutManagement;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools
 {
 	/// <summary>
 	/// Routes F2 to the right renamer: the batch window for a multi-selection, Unity's own inline
@@ -84,7 +84,6 @@ namespace NMJToolBox
 			}
 		}
 
-		private static ShortcutBinding F2Binding() =>
-			new(new KeyCombination(KeyCode.F2, ShortcutModifiers.None));
+		private static ShortcutBinding F2Binding() => new(new KeyCombination(KeyCode.F2));
 	}
 }

@@ -1,8 +1,12 @@
-using System.Text.RegularExpressions;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Text.RegularExpressions;
 
-namespace NMJToolBox
+namespace NMJTools.Extensions
 {
+	[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+	[SuppressMessage("ReSharper", "UnusedMember.Global")]
+	// ReSharper disable once UnusedType.Global
 	public static class StringBeautifier
 	{
 		public static string CapitalizeFirstLetter(this string s)

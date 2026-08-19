@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools
 {
     [ExecuteAlways]
     public class InstantiateInGrid : MonoBehaviour
@@ -17,9 +17,9 @@ namespace NMJToolBox
         [ContextMenu("Instantiate In Grid")]
         private void InstantiateGrid()
         {
-            for (int x = 0; x < column; x++)
+            for (var x = 0; x < column; x++)
             {
-                for (int z = 0; z < row; z++)
+                for (var z = 0; z < row; z++)
                 {
                     var clone = Instantiate(objectToInstantiate, parent);
                     clone.name += $"{x} {z}";

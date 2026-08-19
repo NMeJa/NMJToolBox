@@ -1,7 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools.Extensions
 {
+	[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+	[SuppressMessage("ReSharper", "UnusedMember.Global")]
+	// ReSharper disable once UnusedType.Global
 	public static class MathExtensions
 	{
 		/// <summary>
@@ -23,7 +27,7 @@ namespace NMJToolBox
 			return outMin < outMax ? Mathf.Clamp(result, outMin, outMax) : Mathf.Clamp(result, outMax, outMin);
 		}
 
-		/// <summary>Normalises a value in [min, max] to [0, 1].</summary>
+		/// <summary>Normalizes a value in [min, max] to [0, 1].</summary>
 		public static float Normalize(this float value, float min, float max) => value.Remap(min, max, 0f, 1f);
 
 		/// <summary>

@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools
 {
 	/// <summary>How the selection is ordered before counters are assigned.</summary>
 	public enum RenameOrder
@@ -24,6 +25,7 @@ namespace NMJToolBox
 	/// an Undo) and renaming an asset (<see cref="AssetDatabase.RenameAsset"/>, no Undo, extension
 	/// must be stripped) have almost nothing in common.
 	/// </summary>
+	[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 	public class RenameTarget
 	{
 		public UnityEngine.Object Object { get; private set; }
@@ -47,7 +49,7 @@ namespace NMJToolBox
 		/// <summary>
 		/// Builds targets from the current selection. Returns an empty list when the selection mixes
 		/// scene objects and assets — renaming those together would need two different code paths
-		/// and two different Undo stories, and the resulting counter order would be arbitrary.
+		/// and two different Undo stories, and the resulting counter-order would be arbitrary.
 		/// </summary>
 		public static List<RenameTarget> FromSelection(RenameOrder order, out string error)
 		{
@@ -62,7 +64,7 @@ namespace NMJToolBox
 
 			foreach (var obj in objects)
 			{
-				if (obj == null) continue;
+				if (!obj) continue;
 
 				if (AssetDatabase.Contains(obj)) assets.Add(obj);
 				else if (obj is GameObject go) gameObjects.Add(go);
@@ -75,8 +77,8 @@ namespace NMJToolBox
 				return result;
 			}
 
-			foreach (var go in gameObjects) result.Add(FromGameObject(go));
-			foreach (var asset in assets) result.Add(FromAsset(asset));
+			result.AddRange(gameObjects.Select(FromGameObject));
+			result.AddRange(assets.Select(FromAsset));
 
 			Sort(result, order);
 			return result;
@@ -93,7 +95,7 @@ namespace NMJToolBox
 				NewName = go.name,
 				IsAsset = false,
 				Extension = string.Empty,
-				ParentName = t.parent != null ? t.parent.name : go.scene.name,
+				ParentName = t.parent ? t.parent.name : go.scene.name,
 				TypeName = FirstMeaningfulComponent(go),
 				hierarchyKey = BuildHierarchyKey(t)
 			};
@@ -128,7 +130,7 @@ namespace NMJToolBox
 			var components = go.GetComponents<Component>();
 			foreach (var component in components)
 			{
-				if (component == null) continue; // missing script
+				if (!component) continue; // missing script
 				if (component is Transform) continue;
 				return component.GetType().Name;
 			}
@@ -139,7 +141,7 @@ namespace NMJToolBox
 		private static int[] BuildHierarchyKey(Transform t)
 		{
 			var chain = new List<int>(8);
-			for (var current = t; current != null; current = current.parent)
+			for (var current = t; current; current = current.parent)
 				chain.Add(current.GetSiblingIndex());
 
 			chain.Reverse();
@@ -190,7 +192,7 @@ namespace NMJToolBox
 		public RenameContext BuildContext(string workingName, int index, int total) =>
 			new(workingName, index, total, ParentName, TypeName, Extension);
 
-		/// <summary>Applies <see cref="NewName"/>. Returns an error message, or null on success.</summary>
+		/// <summary>Applies <see cref="NewName"/>. Returns an error message or null on success.</summary>
 		public string Apply()
 		{
 			if (!Changed) return null;

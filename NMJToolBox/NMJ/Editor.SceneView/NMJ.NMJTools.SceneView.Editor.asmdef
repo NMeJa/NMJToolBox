@@ -1,6 +1,6 @@
 {
     "name": "NMJ.NMJTools.SceneView.Editor",
-    "rootNamespace": "NMJToolBox.SceneTools",
+    "rootNamespace": "NMJTools.SceneTools",
     "references": [],
     "includePlatforms": [
         "Editor"

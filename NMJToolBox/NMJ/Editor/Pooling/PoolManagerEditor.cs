@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools.Pooling
 {
 	/// <summary>
 	/// Inspector for <see cref="PoolManager"/>. Adds the thing a pool actually needs at runtime and
@@ -20,10 +20,10 @@ namespace NMJToolBox
 			Selection.activeGameObject = go;
 		}
 
-		private static readonly Color BarBackground = new(0f, 0f, 0f, 0.25f);
-		private static readonly Color BarActive = new(0.35f, 0.75f, 1f, 0.9f);
-		private static readonly Color BarInactive = new(0.35f, 0.75f, 1f, 0.35f);
-		private static readonly Color BarOverflow = new(1f, 0.55f, 0.35f, 0.9f);
+		private static readonly Color barBackground = new(0f, 0f, 0f, 0.25f);
+		private static readonly Color barActive = new(0.35f, 0.75f, 1f, 0.9f);
+		private static readonly Color barInactive = new(0.35f, 0.75f, 1f, 0.35f);
+		private static readonly Color barOverflow = new(1f, 0.55f, 0.35f, 0.9f);
 
 		public override bool RequiresConstantRepaint() => Application.isPlaying;
 
@@ -82,7 +82,7 @@ namespace NMJToolBox
 				}
 
 				var rect = GUILayoutUtility.GetRect(0, 6, GUILayout.ExpandWidth(true));
-				EditorGUI.DrawRect(rect, BarBackground);
+				EditorGUI.DrawRect(rect, barBackground);
 
 				// Scale against max size so an over-budget pool visibly overshoots the bar instead of
 				// silently pinning at 100%.
@@ -92,9 +92,9 @@ namespace NMJToolBox
 				var activeWidth = rect.width * pool.CountActive / scale;
 				var allWidth = rect.width * pool.CountAll / scale;
 
-				EditorGUI.DrawRect(new Rect(rect.x, rect.y, allWidth, rect.height), BarInactive);
+				EditorGUI.DrawRect(new Rect(rect.x, rect.y, allWidth, rect.height), barInactive);
 				EditorGUI.DrawRect(new Rect(rect.x, rect.y, activeWidth, rect.height),
-								   overflowing ? BarOverflow : BarActive);
+								   overflowing ? barOverflow : barActive);
 
 				if (overflowing)
 				{

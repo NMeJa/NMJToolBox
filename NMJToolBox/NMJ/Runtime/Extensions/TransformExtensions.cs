@@ -1,8 +1,12 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools.Extensions
 {
+	[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+	[SuppressMessage("ReSharper", "UnusedMember.Global")]
+	// ReSharper disable once UnusedType.Global
 	public static class TransformExtensions
 	{
 		/// <summary>Every direct child, safe to iterate while re-parenting or destroying.</summary>
@@ -14,8 +18,8 @@ namespace NMJToolBox
 		}
 
 		/// <summary>
-		/// Destroys every child. Uses <see cref="Object.DestroyImmediate"/> outside play mode, because
-		/// <see cref="Object.Destroy"/> is deferred to the end of the frame and edit-mode tooling
+		/// Destroys every child. Uses <see cref="Object.DestroyImmediate(Object)"/> outside play mode, because
+		/// <see cref="Object.Destroy(Object)"/> is deferred to the end of the frame and edit-mode tooling
 		/// would see the children still attached.
 		/// </summary>
 		public static void DestroyChildren(this Transform transform)
@@ -63,7 +67,7 @@ namespace NMJToolBox
 			return transform;
 		}
 
-		/// <summary>Direction from this transform to <paramref name="target"/>, normalised.</summary>
+		/// <summary>Direction from this transform to <paramref name="target"/>, normalized.</summary>
 		public static Vector3 DirectionTo(this Transform transform, Transform target) =>
 			(target.position - transform.position).normalized;
 
@@ -72,7 +76,7 @@ namespace NMJToolBox
 
 		/// <summary>
 		/// Squared distance. Prefer this for comparisons — it skips the square root that
-		/// <see cref="Vector3.Distance"/> pays for a number you then only compare.
+		/// <see cref="Vector3.Distance(Vector3, Vector3)"/> pays for a number you then only compare.
 		/// </summary>
 		public static float SqrDistanceTo(this Transform transform, Transform target) =>
 			(target.position - transform.position).sqrMagnitude;
@@ -81,14 +85,14 @@ namespace NMJToolBox
 		public static string GetPath(this Transform transform)
 		{
 			var path = transform.name;
-			for (var p = transform.parent; p != null; p = p.parent) path = p.name + "/" + path;
+			for (var p = transform.parent; p; p = p.parent) path = p.name + "/" + path;
 			return path;
 		}
 
 		/// <summary>Walks up the parent chain looking for <typeparamref name="T"/>, skipping this transform.</summary>
 		public static T GetComponentInAncestors<T>(this Transform transform) where T : Component
 		{
-			for (var p = transform.parent; p != null; p = p.parent)
+			for (var p = transform.parent; p; p = p.parent)
 				if (p.TryGetComponent(out T component))
 					return component;
 

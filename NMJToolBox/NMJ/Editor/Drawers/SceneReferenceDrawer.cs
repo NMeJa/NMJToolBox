@@ -1,8 +1,9 @@
 using System.Linq;
+using NMJTools.Attributes;
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools
 {
 	/// <summary>
 	/// Drawer for <see cref="SceneReferenceAttribute"/>. Shows a <c>SceneAsset</c> object field but
@@ -40,12 +41,12 @@ namespace NMJToolBox
 			var picked = (SceneAsset)EditorGUI.ObjectField(fieldRect, label, scene, typeof(SceneAsset), false);
 
 			if (EditorGUI.EndChangeCheck())
-				property.stringValue = picked == null ? string.Empty : AssetDatabase.GetAssetPath(picked);
+				property.stringValue = !picked ? string.Empty : AssetDatabase.GetAssetPath(picked);
 
 			// The asset may have been moved or renamed since the path was stored. Re-resolving by GUID
-			// is not possible from a path alone, but when the asset still loads we can refresh the
+			// is not possible from a path alone, but when the asset still loads, we can refresh the
 			// path for free — which quietly repairs references after a move.
-			if (scene != null)
+			if (scene)
 			{
 				var currentPath = AssetDatabase.GetAssetPath(scene);
 				if (currentPath != property.stringValue) property.stringValue = currentPath;
@@ -64,7 +65,7 @@ namespace NMJToolBox
 				return;
 			}
 
-			var buttonWidth = 110f;
+			const float buttonWidth = 110f;
 			var boxRect = new Rect(warnRect.x, warnRect.y, warnRect.width - buttonWidth - 4f, warnRect.height);
 			var buttonRect = new Rect(boxRect.xMax + 4f, warnRect.y + 6f, buttonWidth, warnRect.height - 12f);
 

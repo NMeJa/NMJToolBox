@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools
 {
 	public static class FolderStructureCreator
 	{
@@ -32,7 +32,6 @@ namespace NMJToolBox
 				$"{mainFolderPath}/Runtime/Fonts",
 				$"{mainFolderPath}/Runtime/Resources",
 				$"{mainFolderPath}/Runtime/ScriptableObjects",
-				$"{mainFolderPath}/Runtime/Scripts/Managers",
 			};
 
 			CreateFolders(editorFolders);

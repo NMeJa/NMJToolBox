@@ -1,6 +1,6 @@
 {
     "name": "NMJ.NMJTools.Attributes.Editor",
-    "rootNamespace": "NMJToolBox",
+    "rootNamespace": "NMJTools",
     "references": [
         "NMJ.NMJTools.Attributes"
     ],

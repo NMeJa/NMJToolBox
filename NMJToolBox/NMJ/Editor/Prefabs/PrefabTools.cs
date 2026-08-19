@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
+using NMJTools.Extensions;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace NMJToolBox
+namespace NMJTools
 {
 	/// <summary>
 	/// Prefab operations Unity leaves to hand-work: swapping a selection for a prefab, finding every
@@ -18,7 +19,7 @@ namespace NMJToolBox
 		private static void SelectInstances()
 		{
 			var prefab = Selection.activeObject as GameObject;
-			if (prefab == null) return;
+			if (!prefab) return;
 
 			var matches = FindInstances(prefab);
 
@@ -44,6 +45,7 @@ namespace NMJToolBox
 			var prefabPath = AssetDatabase.GetAssetPath(prefab);
 			var matches = new List<GameObject>();
 
+			// ReSharper disable LoopCanBeConvertedToQuery
 			foreach (var root in LoadedRootObjects())
 			{
 				foreach (var transform in root.GetComponentsInChildren<Transform>(true))
@@ -52,11 +54,12 @@ namespace NMJToolBox
 					if (!PrefabUtility.IsAnyPrefabInstanceRoot(go)) continue;
 
 					var source = PrefabUtility.GetCorrespondingObjectFromOriginalSource(go);
-					if (source == null) continue;
+					if (!source) continue;
 
 					if (AssetDatabase.GetAssetPath(source) == prefabPath) matches.Add(go);
 				}
 			}
+			// ReSharper restore LoopCanBeConvertedToQuery
 
 			return matches;
 		}
@@ -76,18 +79,18 @@ namespace NMJToolBox
 		public static int Replace(IReadOnlyList<GameObject> targets, GameObject prefab,
 								  bool keepName, bool keepScale, bool keepLayerAndTag)
 		{
-			if (prefab == null || targets == null) return 0;
+			if (!prefab || targets == null) return 0;
 
 			var replaced = 0;
 			var created = new List<Object>(targets.Count);
 
 			foreach (var target in targets)
 			{
-				if (target == null) continue;
+				if (!target) continue;
 				if (PrefabUtility.IsPartOfPrefabAsset(target)) continue;
 
 				var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, target.scene);
-				if (instance == null) continue;
+				if (!instance) continue;
 
 				Undo.RegisterCreatedObjectUndo(instance, "Replace With Prefab");
 
@@ -153,6 +156,7 @@ namespace NMJToolBox
 			foreach (var go in affected)
 				Debug.LogWarning($"[NMJ] Missing script on '{go.transform.GetPath()}'", go);
 
+			// ReSharper disable once InvertIf
 			if (EditorUtility.DisplayDialog("Missing Scripts",
 											$"Found {total} missing script(s) on {affected.Count} object(s).\n\n" +
 											"They are now selected and listed in the Console.\n\n" +
@@ -218,7 +222,7 @@ namespace NMJToolBox
 				GUILayout.FlexibleSpace();
 				if (GUILayout.Button("Cancel", GUILayout.Width(80))) Close();
 
-				using (new EditorGUI.DisabledScope(prefab == null || targets.Count == 0))
+				using (new EditorGUI.DisabledScope(!prefab || targets.Count == 0))
 				{
 					if (!GUILayout.Button("Replace", GUILayout.Width(110))) return;
 

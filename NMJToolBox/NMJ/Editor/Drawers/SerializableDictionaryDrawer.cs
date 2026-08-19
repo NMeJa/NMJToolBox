@@ -1,8 +1,9 @@
 using System.Collections.Generic;
+using NMJTools.Serialization;
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools
 {
 	/// <summary>
 	/// Draws a <see cref="SerializableDictionary{TKey,TValue}"/> as paired key/value rows instead of
@@ -180,9 +181,9 @@ namespace NMJToolBox
 				SerializedPropertyType.Enum => "e:" + property.enumValueIndex,
 				SerializedPropertyType.Float => "f:" + property.doubleValue,
 				SerializedPropertyType.Boolean => "b:" + property.boolValue,
-				SerializedPropertyType.ObjectReference => "o:" + (property.objectReferenceValue
-																	 ? property.objectReferenceInstanceIDValue.ToString()
-																	 : "null"),
+				// SerializedPropertyType.ObjectReference => "o:" + (property.objectReferenceValue
+				// 													 ? property.objectReferenceInstanceIDValue.ToString()
+				// 													 : "null"),
 				_ => "?:" + property.propertyPath
 			};
 		}

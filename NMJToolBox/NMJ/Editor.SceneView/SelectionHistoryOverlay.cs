@@ -4,7 +4,7 @@ using UnityEditor.ShortcutManagement;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace NMJToolBox.SceneTools
+namespace NMJTools.SceneTools
 {
 	/// <summary>
 	/// Back/forward navigation through your selection history, plus the full list.
@@ -92,19 +92,17 @@ namespace NMJToolBox.SceneTools
 
 		private void Refresh()
 		{
-			if (backButton != null) backButton.SetEnabled(SelectionHistory.CanGoBack);
-			if (forwardButton != null) forwardButton.SetEnabled(SelectionHistory.CanGoForward);
+			backButton?.SetEnabled(SelectionHistory.CanGoBack);
+			forwardButton?.SetEnabled(SelectionHistory.CanGoForward);
 
 			if (list == null) return;
 
 			list.itemsSource = (System.Collections.IList)SelectionHistory.Entries;
 			list.Rebuild();
 
-			if (SelectionHistory.Cursor >= 0 && SelectionHistory.Cursor < SelectionHistory.Entries.Count)
-			{
-				list.SetSelectionWithoutNotify(new[] { SelectionHistory.Cursor });
-				list.ScrollToItem(SelectionHistory.Cursor);
-			}
+			if (SelectionHistory.Cursor < 0 || SelectionHistory.Cursor >= SelectionHistory.Entries.Count) return;
+			list.SetSelectionWithoutNotify(new[] { SelectionHistory.Cursor });
+			list.ScrollToItem(SelectionHistory.Cursor);
 		}
 
 		/// <summary>

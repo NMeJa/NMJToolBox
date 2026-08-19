@@ -1,11 +1,11 @@
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace NMJToolBox
+namespace NMJTools.Pooling
 {
 	/// <summary>
 	/// Spawns from a pool without any code. Every entry point is a public no-argument (or single
-	/// argument) method, so it can be driven from a UnityEvent, a UI Button, an Animation Event or
+	/// argument) method, so it can be driven from a UnityEvent, a UI Button, an Animation Event, or
 	/// a Timeline signal.
 	/// </summary>
 	[AddComponentMenu("NMJ/Pooling/Pool Spawner")]
@@ -57,9 +57,9 @@ namespace NMJToolBox
 
 		private Transform Origin => spawnAt switch
 		{
-			SpawnAt.SpawnPoint    => spawnPoint != null ? spawnPoint : transform,
-			SpawnAt.WorldOrigin   => null,
-			_                     => transform
+			SpawnAt.SpawnPoint  => spawnPoint != null ? spawnPoint : transform,
+			SpawnAt.WorldOrigin => null,
+			_                   => transform
 		};
 
 		private void OnEnable()
@@ -81,8 +81,8 @@ namespace NMJToolBox
 		{
 			var origin = Origin;
 
-			var position = origin != null ? origin.TransformPoint(offset) : offset;
-			var rotation = origin != null ? origin.rotation : Quaternion.identity;
+			var position = origin ? origin.TransformPoint(offset) : offset;
+			var rotation = origin ? origin.rotation : Quaternion.identity;
 
 			if (randomSpread != Vector3.zero)
 			{
@@ -98,7 +98,7 @@ namespace NMJToolBox
 							   ? PoolManager.Spawn(prefab, position, rotation, parent)
 							   : PoolManager.Spawn(poolId, position, rotation, parent);
 
-			if (instance != null) onSpawned?.Invoke(instance);
+			if (instance) onSpawned?.Invoke(instance);
 		}
 
 		/// <summary>Spawns <paramref name="count"/> instances in one call.</summary>
@@ -110,14 +110,14 @@ namespace NMJToolBox
 		private void OnDrawGizmosSelected()
 		{
 			var origin = Origin;
-			var position = origin != null ? origin.TransformPoint(offset) : offset;
+			var position = origin ? origin.TransformPoint(offset) : offset;
 
-			Gizmos.color = new Color(0.4f, 0.85f, 1f, 0.9f);
-			Gizmos.DrawWireSphere(position, 0.15f);
+			UnityEngine.Gizmos.color = new Color(0.4f, 0.85f, 1f, 0.9f);
+			UnityEngine.Gizmos.DrawWireSphere(position, 0.15f);
 
 			if (randomSpread == Vector3.zero) return;
-			Gizmos.color = new Color(0.4f, 0.85f, 1f, 0.25f);
-			Gizmos.DrawWireCube(position, randomSpread);
+			UnityEngine.Gizmos.color = new Color(0.4f, 0.85f, 1f, 0.25f);
+			UnityEngine.Gizmos.DrawWireCube(position, randomSpread);
 		}
 	}
 }
