@@ -2,9 +2,7 @@
     "name": "NMJ.NMJTools.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:0f0b29311be08be4597b091fd61ae9a7",
-        "UltimateEditorEnhancer-Editor",
-        "UltimateEditorEnhancer"
+        "GUID:0f0b29311be08be4597b091fd61ae9a7"
     ],
     "includePlatforms": [
         "Editor"

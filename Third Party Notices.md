@@ -1,17 +1,19 @@
-This package contains third-party software components governed by the license(s) indicated below:
+This package bundles no third-party source code.
 
-Component Name: EditorToolbox
+Earlier versions shipped copies of NaughtyAttributes, EButton and EditorToolbox; those were removed
+in v1.0.2 and this notice was left stale until v2.0.0.
 
-License Type: "MIT"
-
-[EditorToolbox License](https://github.com/kevincastejon/EditorToolbox/blob/main/LICENSE)
+The package declares one package dependency, resolved by Unity's Package Manager rather than
+vendored here:
 
 --------------------------------------------------------------------------------------------------
 
-Component Name: NaughtyAttributes
+Component Name: Newtonsoft Json for Unity (`com.unity.nuget.newtonsoft-json`)
 
 License Type: "MIT"
 
-[NaughtyAttributes License](https://github.com/dbrizov/NaughtyAttributes/blob/master/LICENSE)
+[Newtonsoft.Json License](https://github.com/JamesNK/Newtonsoft.Json/blob/master/LICENSE.md)
+
+Used only by `ParsingExtensions.ParseJson<T>`.
 
 --------------------------------------------------------------------------------------------------
