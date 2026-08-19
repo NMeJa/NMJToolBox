@@ -1,0 +1,19 @@
+{
+    "name": "NMJ.NMJTools.LitMotion",
+    "rootNamespace": "NMJToolBox",
+    "references": [
+        "NMJ.NMJTools.Runtime",
+        "LitMotion"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "NMJ_LITMOTION"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

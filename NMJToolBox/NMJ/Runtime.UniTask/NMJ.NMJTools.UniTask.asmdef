@@ -1,0 +1,19 @@
+{
+    "name": "NMJ.NMJTools.UniTask",
+    "rootNamespace": "NMJToolBox",
+    "references": [
+        "NMJ.NMJTools.Runtime",
+        "UniTask"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "NMJ_UNITASK"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

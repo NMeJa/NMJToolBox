@@ -24,9 +24,15 @@ https://github.com/NMeJa/NMJToolBox.git
 | Runtime | `NMJ.NMJTools.Runtime` | `NMJToolBox/NMJ/Runtime/` |
 | Editor | `NMJ.NMJTools.Editor` | `NMJToolBox/NMJ/Editor/` |
 | Scene view overlays | `NMJ.NMJTools.SceneView.Editor` | `NMJToolBox/NMJ/Editor.SceneView/` |
+| Inspector attributes *(opt-in)* | `NMJ.NMJTools.Attributes` (+ `.Editor`) | `NMJToolBox/NMJ/Runtime.Attributes/`, `Editor.Attributes/` |
+| UniTask integration *(opt-in)* | `NMJ.NMJTools.UniTask` | `NMJToolBox/NMJ/Runtime.UniTask/` |
+| LitMotion integration *(opt-in)* | `NMJ.NMJTools.LitMotion` | `NMJToolBox/NMJ/Runtime.LitMotion/` |
 
-Namespace: `NMJToolBox`, except the scene-view overlays (`NMJToolBox.SceneTools`) and
-`ListContainer` (`CustomListView`).
+Namespace: `NMJToolBox`, except the scene-view overlays (`NMJToolBox.SceneTools`), the setup tooling
+(`NMJToolBox.Setup`) and `ListContainer` (`CustomListView`).
+
+The *opt-in* assemblies are gated by `defineConstraints` and compile only when the matching package
+is present — see [Optional package integrations](#optional-package-integrations).
 
 ### Menu items
 
@@ -41,8 +47,17 @@ Namespace: `NMJToolBox`, except the scene-view overlays (`NMJToolBox.SceneTools`
 | `GameObject ▸ NMJ ▸ Create Collection` | `Ctrl+G` | `CreateCollection` |
 | `GameObject ▸ NMJ ▸ Dissolve Collection` | `Ctrl+Shift+G` | `CreateCollection` |
 | `GameObject ▸ NMJ ▸ Pool Manager` | | `PoolManagerEditor` |
+| `GameObject ▸ NMJ ▸ Replace With Prefab…` | | `PrefabTools` |
+| `Assets ▸ NMJ ▸ Select Instances In Open Scenes` | | `PrefabTools` |
+| `Assets ▸ NMJ ▸ Find Usages` | | `AssetUsageBridge` |
+| `Tools ▸ NMJ ▸ Find Missing Scripts In Open Scenes` | | `PrefabTools` |
+| `Tools ▸ NMJ ▸ Setup ▸ Project Setup` | | `ProjectSetupWindow` |
+| `Tools ▸ NMJ ▸ Setup ▸ Re-scan Packages` | | `PackageDetector` |
+| `Tools ▸ NMJ ▸ Build ▸ Build Timestamped` | `Ctrl+Shift+B` | `BuildTools` |
+| `Tools ▸ NMJ ▸ Build ▸ Increment … Version` | | `BuildTools` |
+| `Tools ▸ NMJ ▸ Open ▸ …` | | `BuildTools` |
 | Component ⋮ ▸ `Rename GameObject To This Component` | | `GameObjectName` |
-| Scene view ⋮ ▸ `Mini Hierarchy` / `Inspector` | `` ` `` | Scene view overlays |
+| Scene view ⋮ ▸ `Mini Hierarchy` / `Inspector` / `Selection History` / `Isolate` | `` ` `` | Scene view overlays |
 
 ---
 
@@ -158,6 +173,59 @@ fsm.Change(new RunState());                    // Exit() old → Enter() new
 `State` exposes a `protected MonoBehaviour user` field for the owning behaviour.
 `StateMachine` only drives `Enter`/`Exit` — pump `Update`/`FixedUpdate` yourself if you need them.
 
+## Extensions
+
+`TransformExtensions` · `Children()`, `Descendants()`, `DestroyChildren()` (edit-mode safe),
+`ResetLocal()`, `SetX/Y/Z`, `Translate`, `DirectionTo`, `SqrDistanceTo`, `GetPath()`,
+`GetComponentInAncestors<T>()`.
+
+`GameObjectExtensions` · `GetOrAddComponent<T>()`, `HasComponent<T>()`, `SetLayerRecursively`
+(by index or name), `IsInLayerMask`, `SafeDestroy()`, `WithActive()`.
+
+`VectorExtensions` · `With(x:, y:, z:)` and `Add(...)` for partial copies, `Flatten()`,
+`FlatDirection()`, `ToXZ()`, `Multiply`/`Divide`, `Rotate(degrees)`, `IsCloserThan` (squared, no
+square root), `Abs()`, `SnapToGrid()`, `Bounds.RandomPointInside()`.
+
+`MathExtensions` · `Remap` / `RemapClamped` / `Normalize`, `Approximately(other, tolerance)`,
+`Wrap` (int and float, negatives handled — unlike `%`), `IsBetween`, `PercentBetween`, `SnapTo`.
+
+```csharp
+transform.position = transform.position.With(y: 0f);
+var t = health.Remap(0f, maxHealth, 0f, 1f);
+var rb = gameObject.GetOrAddComponent<Rigidbody>();
+```
+
+## `SerializableDictionary<TKey, TValue>`
+
+A real `Dictionary` Unity can serialize. Unity's serializer has never supported `Dictionary<,>` —
+marking one `[SerializeField]` does nothing, silently, and the field resets on every domain reload.
+
+```csharp
+[SerializeField] private SerializableDictionary<string, int> scores = new();
+```
+
+Unity 2020.1+ serializes generic fields directly, so no subclass is needed. The custom drawer shows
+paired key/value rows with add/remove, and tints duplicate keys red — mid-edit the backing lists
+legitimately hold duplicates that a dictionary cannot, so those rows stay visible and fixable rather
+than silently discarded. Only the first occurrence of a duplicate key survives into the dictionary.
+
+## `[SceneReference]`
+
+Turns any `string` field into a scene picker.
+
+```csharp
+[SerializeField, SceneReference] private string mainMenu;
+...
+SceneManager.LoadScene(mainMenu);
+```
+
+Stores the scene's asset path — which is what `SceneManager` wants — while editing it as a
+`SceneAsset`. The drawer rewrites the path when the asset moves, warns when the scene is missing
+from Build Settings, and offers a one-click **Add to Build**.
+
+> This replaced `SceneChangerEditor`, which hand-rolled the same logic for one component.
+> `SceneChanger` is now a plain field with no custom inspector, and the stored value is unchanged.
+
 ## Pooling
 
 An inspector-driven object pool. It does **not** reimplement pooling — `UnityEngine.Pool.ObjectPool<T>`
@@ -231,6 +299,35 @@ every spawn, which is why `Destroy(go, t)` in `Start` stops working the moment a
 Optional. Implement `OnSpawned()` / `OnDespawned()` on any component of the prefab (children
 included) when `OnEnable` is the wrong moment because you need to run *after* the pool has
 positioned and parented the instance. Resolved once at creation and cached.
+
+## `GizmoUtils`
+
+The shapes `Gizmos` leaves out. Call from `OnDrawGizmos`; they respect `Gizmos.color` and
+`Gizmos.matrix` like the built-ins.
+
+`DrawArrow` · `DrawCircle` · `DrawWireSphere` · `DrawWireCapsule` (matches a `CapsuleCollider`,
+which `Gizmos` cannot draw) · `DrawArc` · `DrawViewCone` (FOV / detection ranges) · `DrawCross` ·
+`DrawBounds` · `DrawPath` · `DrawLabel` (editor-only, compiles away in a build).
+
+## Optional package integrations
+
+Some classes gain extra behaviour when a package you already use is in the project. Detection and
+the matching define symbols are automatic — see [Project setup](#project-setup).
+
+| Package | Define | What lights up |
+| --- | --- | --- |
+| **UniTask** | `NMJ_UNITASK` | `UniTaskReturnToPool`, `GameObject.DespawnAfterAsync()`, `SpawnForAsync()`, awaitable `SceneChanger.LoadAsync()` / `LoadAdditiveAsync()` / `UnloadAsync()` |
+| **LitMotion** | `NMJ_LITMOTION` | `MotionReturnToPool` (tweened spawn/despawn for pooled objects), `PoolMotionExtensions.SpawnWithPop()` |
+| **Odin Inspector** | `ODIN_INSPECTOR` | Switches NMJ's own `[ReadOnly]` / `[Required]` / `[Button]` **off**, so the two cannot collide |
+| **Asset Usage Detector** | `NMJ_ASSETUSAGEDETECTOR` | `Assets ▸ NMJ ▸ Find Usages` |
+
+Each integration lives in its own assembly gated by `defineConstraints`. The core assemblies never
+reference these packages, so **NMJ ToolBox has no hard dependency on any of them** — an uninstalled
+package means the integration assembly is skipped, not that the build breaks.
+
+`UniTaskReturnToPool` is worth calling out: the built-in `ReturnToPool` polls a timer in `Update`,
+which is fine for a handful of objects and wasteful for hundreds. The UniTask version runs off one
+shared PlayerLoop hook, so the per-instance cost is zero.
 
 ## `SceneChanger`
 
@@ -361,6 +458,62 @@ where they were.
   layouts survive grouping.
 * Drops straight into inline rename, so naming the collection is part of the same gesture.
 * Fully undoable.
+
+## Project setup
+
+`Tools ▸ NMJ ▸ Setup ▸ Project Setup` — brings a fresh project up to a standard package set, and
+keeps the integration define symbols in sync.
+
+**What it can do:** free and OpenUPM packages install with one button. OpenUPM needs a scoped
+registry, which the window writes into `Packages/manifest.json` first (merging scopes; it refuses
+and prints instructions rather than clobbering an existing `scopedRegistries` block).
+
+**What it cannot do — and why:** paid Asset Store packages cannot be installed by script. Unity
+checks entitlement server-side against the signed-in account, so no API can make a package you don't
+own appear. What *is* possible: if you already downloaded one on this machine, Unity keeps the
+`.unitypackage` in a shared per-user cache, and the window imports it straight from there. Failing
+that it opens the store page. **This is the honest ceiling on "one-button install".**
+
+### Define symbols
+
+`PackageDetector` scans loaded assemblies after every recompile and adds or removes the `NMJ_*`
+defines to match. Assembly scanning is used rather than asmdef `versionDefines` because it covers
+both cases uniformly: UPM packages, and Asset Store content dropped into `Assets/`, which is not a
+package at all and has no version to bind to.
+
+Defines are only written when the set actually changes — writing them triggers a recompile, which
+re-enters the detector, so that check is what stops it looping.
+
+### Odin and the NMJ attribute set
+
+NMJ's `[ReadOnly]`, `[Required]` and `[Button]` live behind `NMJ_ATTRIBUTES`, which the detector sets
+**only while Odin is absent**. Odin declares all three names too, so with both imported every use
+becomes ambiguous — and both claim the default MonoBehaviour inspector. The window offers a
+*Force NMJ attributes alongside Odin* override if you intend to fully qualify them.
+
+| Attribute | Behaviour |
+| --- | --- |
+| `[ReadOnly]` | Shown but not editable |
+| `[Required]` | Red error box under the field while a reference is unassigned or a string is blank |
+| `[Button("Label", ButtonMode.PlayModeOnly)]` | Draws a button that invokes the method; works on `ScriptableObject`s and multi-selections |
+
+## Prefab tools
+
+| Command | Description |
+| --- | --- |
+| `GameObject ▸ NMJ ▸ Replace With Prefab…` | Swaps the selection for prefab instances. Position, rotation, parent, sibling index and active state are always kept; name, scale and layer/tag are optional. Undoable as one step. |
+| `Assets ▸ NMJ ▸ Select Instances In Open Scenes` | Selects every instance of the selected prefab asset. |
+| `Assets ▸ NMJ ▸ Find Usages` | Opens Asset Usage Detector when installed. |
+| `Tools ▸ NMJ ▸ Find Missing Scripts In Open Scenes` | Lists and selects objects with missing scripts, then offers to strip the empty components. |
+
+## Build tools
+
+| Command | Description |
+| --- | --- |
+| `Tools ▸ NMJ ▸ Build ▸ Increment Patch/Minor/Major Version` | Bumps `bundleVersion` and zeroes the components after it. Also bumps `Android.bundleVersionCode` and the iOS build number, which stores require and a display-version bump alone does not cover. |
+| `Tools ▸ NMJ ▸ Build ▸ Auto-Increment Patch On Build` | Toggle; runs as a pre-build step so the baked version is the incremented one. |
+| `Tools ▸ NMJ ▸ Build ▸ Build Timestamped` (`Ctrl+Shift+B`) | Builds into `Builds/<Target>/<Product>_<version>_<timestamp>/` and reveals the folder. |
+| `Tools ▸ NMJ ▸ Open ▸ …` | Persistent data path, project folder, editor log folder. |
 
 ## `AssetDatabaseExtensions`
 
@@ -533,6 +686,29 @@ not a reimplementation. A GameObject shows one foldout per component (Transform 
 assets show a single inspector. With several objects selected it shows the active one and says how
 many others there are.
 
+## Selection History
+
+Back/forward through everything you have selected — the browser history Unity has never had.
+Buttons plus the full list; clicking an entry jumps straight to it.
+
+The recorder is static and `[InitializeOnLoad]`, not owned by the overlay, so history survives the
+overlay being closed, the Scene view re-docked, and a domain reload. Selecting something new after
+stepping back discards the forward branch, exactly like a browser. Destroyed objects are pruned.
+
+Two shortcuts are registered **without default bindings** (`NMJ/Selection History/Back` and
+`/Forward`) — a shortcut that collides with an existing one leaves *both* disabled, and there is no
+key here that is free on every platform. Bind them yourself in `Edit ▸ Shortcuts`; Alt+Left /
+Alt+Right match the browser convention.
+
+## Isolate
+
+Solo and hide controls: **Isolate Selection**, **Exit Isolation**, **Hide**, **Show All**.
+
+Drives Unity's own `SceneVisibilityManager` rather than toggling `SetActive`. That distinction
+matters — scene visibility is a pure editor concern that never touches the serialized scene, so
+nothing here can dirty a scene, break a prefab override, or leak into a build. Hiding things by
+deactivating them does all three.
+
 ## Splitting them out
 
 These two are the strongest candidate in this package to become **their own package**, and the
@@ -555,8 +731,14 @@ Everything else here (pooling, batch rename, collections) is general-purpose and
 | `NMJ.NMJTools.Runtime` | All | Newtonsoft.Json |
 | `NMJ.NMJTools.Editor` | Editor | `NMJ.NMJTools.Runtime` |
 | `NMJ.NMJTools.SceneView.Editor` | Editor | — |
+| `NMJ.NMJTools.Attributes` | All | — · gated by `NMJ_ATTRIBUTES` |
+| `NMJ.NMJTools.Attributes.Editor` | Editor | `NMJ.NMJTools.Attributes` · gated by `NMJ_ATTRIBUTES` |
+| `NMJ.NMJTools.UniTask` | All | `NMJ.NMJTools.Runtime`, UniTask · gated by `NMJ_UNITASK` |
+| `NMJ.NMJTools.LitMotion` | All | `NMJ.NMJTools.Runtime`, LitMotion · gated by `NMJ_LITMOTION` |
 
-No third-party assembly references — the package compiles in a clean project.
+The two core assemblies have no third-party references, so the package compiles in a clean project.
+Every optional integration lives in its own assembly behind `defineConstraints`, so an uninstalled
+package means that assembly is skipped rather than the build breaking.
 
 ## Related packages
 

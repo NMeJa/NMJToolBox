@@ -1,5 +1,70 @@
 # NMJToolBox version history
 
+## v2.2.0
+
+### Added — optional package integrations
+
+  - `Tools ▸ NMJ ▸ Setup ▸ Project Setup`: installs the standard package set. Free and OpenUPM
+    packages install in one click (the OpenUPM scoped registry is written into `manifest.json`
+    first, merging scopes and refusing rather than clobbering an existing `scopedRegistries` block).
+  - **Paid Asset Store packages cannot be installed by script** — Unity checks entitlement
+    server-side against the signed-in account. The window instead looks for a copy already in the
+    per-user Asset Store download cache and imports that, falling back to opening the store page.
+    That is the honest ceiling on "one-button install".
+  - `PackageDetector` scans loaded assemblies after every recompile and keeps the `NMJ_*` define
+    symbols in sync. Assembly scanning rather than asmdef `versionDefines`, because it covers UPM
+    packages and Asset Store content dropped into `Assets/` identically — the latter is not a
+    package and has no version to bind to. Defines are only written when the set actually changes,
+    which is what stops the write→recompile→detect cycle from looping.
+  - **UniTask** (`NMJ_UNITASK`): `UniTaskReturnToPool` — a drop-in for `ReturnToPool` with no
+    per-instance `Update` at all — plus `DespawnAfterAsync`, `SpawnForAsync`, and awaitable
+    `SceneChanger.LoadAsync` / `LoadAdditiveAsync` / `UnloadAsync`.
+  - **LitMotion** (`NMJ_LITMOTION`): `MotionReturnToPool` for tweened pooled spawn/despawn, and
+    `PoolMotionExtensions.SpawnWithPop`.
+  - **Asset Usage Detector** (`NMJ_ASSETUSAGEDETECTOR`): `Assets ▸ NMJ ▸ Find Usages`. Reached via
+    `ExecuteMenuItem` rather than an assembly reference, so a renamed assembly degrades to a
+    warning instead of taking the whole editor assembly down.
+  - **Odin Inspector**: NMJ's own `[ReadOnly]`/`[Required]`/`[Button]` now switch **off**
+    automatically while Odin is present. Odin declares all three names and also claims the default
+    MonoBehaviour inspector, so the two cannot coexist without ambiguity. A *Force NMJ attributes
+    alongside Odin* override exists for anyone willing to fully qualify them.
+  - Every integration lives in its own `defineConstraints`-gated assembly. The core assemblies
+    reference none of these packages, so **NMJ ToolBox still has no hard third-party dependency** —
+    an uninstalled package means the integration assembly is skipped, not a broken build.
+
+### Added — runtime
+
+  - `TransformExtensions`, `GameObjectExtensions`, `VectorExtensions`, `MathExtensions` —
+    `GetOrAddComponent`, `DestroyChildren`, `SetLayerRecursively`, `With(x:,y:,z:)`, `Remap`,
+    `Wrap`, `SnapToGrid` and the rest.
+  - `SerializableDictionary<TKey,TValue>` with a paired-row property drawer. Unity's serializer has
+    never supported `Dictionary<,>`; marking one `[SerializeField]` does nothing, silently. The
+    drawer keeps duplicate and empty keys visible while editing instead of discarding them.
+  - `GizmoUtils` — arrows, arcs, view cones, and a wire capsule matching `CapsuleCollider`, none of
+    which `Gizmos` provides.
+
+### Added — editor
+
+  - `[SceneReference]` turns any `string` field into a scene picker that stores the asset path,
+    warns when the scene is missing from Build Settings, and offers a one-click **Add to Build**.
+  - Prefab tools: **Replace With Prefab** (keeps transform, parent, sibling index and active state),
+    **Select Instances In Open Scenes**, **Find Missing Scripts** with bulk removal.
+  - Build tools: version increment (including `Android.bundleVersionCode` and the iOS build number,
+    which stores require and a display-version bump alone misses), optional auto-increment as a
+    pre-build step, timestamped builds, and quick-open folder commands.
+  - Scene view **Selection History** overlay — back/forward through selections, with a static
+    recorder that survives domain reloads. Its shortcuts ship unbound: a colliding shortcut leaves
+    *both* disabled, and no key here is free on every platform.
+  - Scene view **Isolate** overlay, driving Unity's `SceneVisibilityManager` rather than toggling
+    `SetActive` — so it cannot dirty a scene, break a prefab override, or leak into a build.
+
+### Changed
+
+  - `SceneChanger` now uses `[SceneReference]` and **`SceneChangerEditor` has been removed**; the
+    attribute provides the same picker and Build Settings button for any string field. The stored
+    value is unchanged, so existing prefabs and scenes keep working.
+
+---
 ## v2.1.0
 
 ### Added — Pooling (runtime)

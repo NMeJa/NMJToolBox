@@ -5,13 +5,14 @@ namespace NMJToolBox
 {
     public class SceneChanger : MonoBehaviour
     {
-#if UNITY_EDITOR
-        [SerializeField]
-        private UnityEditor.SceneAsset sceneAsset;
-#endif
+        // Was backed by a #if UNITY_EDITOR SceneAsset field plus a hand-written custom inspector.
+        // [SceneReference] now provides the same scene picker and the "Add to Build Settings" button
+        // on any string field, so both of those are gone. The stored value is unchanged - still the
+        // scene's asset path - so existing prefabs and scenes keep working.
         [UnityEngine.Serialization.FormerlySerializedAs("sceneName")]
-        [SerializeField]
+        [SerializeField, SceneReference]
         private string scenePath;
+
         public string ScenePath
         {
             get => scenePath;
