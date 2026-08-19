@@ -14,31 +14,72 @@ namespace NMJToolBox
 	public static class GizmoUtils
 	{
 		/// <summary>Line with an arrowhead, for directions, forces and links between objects.</summary>
+		/// <param name="headLength">
+		/// Length of the head measured back along the shaft. Clamped to half the arrow's length, so a
+		/// head can never overshoot <paramref name="from"/> and render pointing the wrong way.
+		/// </param>
+		/// <param name="headAngle">Half-angle of the head in degrees.</param>
 		public static void DrawArrow(Vector3 from, Vector3 to, float headLength = 0.25f, float headAngle = 22f)
 		{
 			Gizmos.DrawLine(from, to);
 
 			var direction = to - from;
-			if (direction.sqrMagnitude < 1e-8f) return;
+			var distance = direction.magnitude;
+			if (distance < 1e-4f) return;
 
-			direction.Normalize();
+			// The magnitude is already known, so divide by it instead of calling Normalize and paying
+			// for a second square root.
+			direction /= distance;
+
+			var length = Mathf.Min(headLength, distance * 0.5f);
+
+			// tan diverges at 90 degrees and turns negative beyond it, which would fold the head
+			// inside out; clamping keeps a nonsense angle merely ugly rather than wrong.
+			var spread = Mathf.Tan(Mathf.Clamp(headAngle, 0.1f, 89f) * Mathf.Deg2Rad) * length;
 
 			// Any vector not parallel to the direction works as the reference for the head's plane;
 			// up is the natural choice, with right as the fallback for a vertical arrow.
 			var reference = Mathf.Abs(Vector3.Dot(direction, Vector3.up)) > 0.99f ? Vector3.right : Vector3.up;
 			var side = Vector3.Cross(direction, reference).normalized;
 
-			var back = -direction * headLength;
-			var spread = Mathf.Tan(headAngle * Mathf.Deg2Rad) * headLength;
+			// direction and side are perpendicular unit vectors, so their cross product is unit length
+			// by construction — normalising it would be a square root per draw call for nothing.
+			var headUp = Vector3.Cross(direction, side);
 
-			Gizmos.DrawLine(to, to + back + side * spread);
-			Gizmos.DrawLine(to, to + back - side * spread);
-			Gizmos.DrawLine(to, to + back + Vector3.Cross(direction, side).normalized * spread);
-			Gizmos.DrawLine(to, to + back - Vector3.Cross(direction, side).normalized * spread);
+			var basePoint = to - direction * length;
+
+			var right = basePoint + side * spread;
+			var left = basePoint - side * spread;
+			var top = basePoint + headUp * spread;
+			var bottom = basePoint - headUp * spread;
+
+			Gizmos.DrawLine(to, right);
+			Gizmos.DrawLine(to, left);
+			Gizmos.DrawLine(to, top);
+			Gizmos.DrawLine(to, bottom);
+
+			// Closing the base into a diamond makes the head read as a solid pyramid from glancing
+			// angles, where four loose fins collapse into an ambiguous cross.
+			Gizmos.DrawLine(right, top);
+			Gizmos.DrawLine(top, left);
+			Gizmos.DrawLine(left, bottom);
+			Gizmos.DrawLine(bottom, right);
 		}
 
-		public static void DrawArrow(Vector3 origin, Vector3 direction, float length, float headLength = 0.25f) =>
-			DrawArrow(origin, origin + direction.normalized * length, headLength);
+		/// <summary>
+		/// Arrow from an origin along a direction, mirroring <see cref="Gizmos.DrawRay(Vector3,Vector3)"/>.
+		/// </summary>
+		/// <remarks>
+		/// Deliberately not an overload of <see cref="DrawArrow"/>. Both would begin
+		/// (Vector3, Vector3, float), so a three-argument call could not be told apart: the compiler
+		/// has nothing to choose on but identical parameter types, and a reader has nothing either.
+		/// <c>DrawArrow(a, b, 2f)</c> looks like origin/direction/length and would resolve as
+		/// from/to/headLength — a silently wrong picture rather than an error. A separate name makes
+		/// the call site say which one it means.
+		/// </remarks>
+		public static void DrawArrowRay(Vector3 origin, Vector3 direction, float length,
+										float headLength = 0.25f, float headAngle = 22f) =>
+			DrawArrow(origin, origin + direction.normalized * length, headLength, headAngle);
 
 		/// <summary>Circle on an arbitrary plane. <paramref name="normal"/> is the plane's axis.</summary>
 		public static void DrawCircle(Vector3 centre, Vector3 normal, float radius, int segments = 32)
@@ -48,7 +89,11 @@ namespace NMJToolBox
 			var axis = normal.sqrMagnitude < 1e-8f ? Vector3.up : normal.normalized;
 			var reference = Mathf.Abs(Vector3.Dot(axis, Vector3.up)) > 0.99f ? Vector3.right : Vector3.up;
 			var right = Vector3.Cross(axis, reference).normalized * radius;
-			var forward = Vector3.Cross(axis, right).normalized * radius;
+
+			// axis is unit and right is perpendicular to it with magnitude radius, so this cross
+			// product already has magnitude radius — normalising and rescaling it would be a wasted
+			// square root.
+			var forward = Vector3.Cross(axis, right);
 
 			var previous = centre + right;
 			for (var i = 1; i <= segments; i++)
@@ -97,17 +142,30 @@ namespace NMJToolBox
 			DrawArc(bottom, -up, forward, 180f, radius, segments / 2);
 		}
 
-		/// <summary>Arc swept around <paramref name="axis"/>, starting from <paramref name="from"/>.</summary>
-		public static void DrawArc(Vector3 centre, Vector3 axis, Vector3 from, float degrees, float radius, int segments = 16)
+		/// <summary>
+		/// Arc starting at <paramref name="from"/> and bending toward <paramref name="towards"/>.
+		/// </summary>
+		/// <param name="towards">
+		/// The direction the arc bulges into — <em>not</em> the rotation axis. For a hemisphere cap,
+		/// pass the capsule's up vector and the radial direction to start from; the rotation axis is
+		/// derived from the two.
+		/// </param>
+		public static void DrawArc(Vector3 centre, Vector3 towards, Vector3 from, float degrees, float radius, int segments = 16)
 		{
 			if (segments < 1) segments = 1;
+
+			// Loop-invariant: the rotation axis depends only on the two direction arguments, so
+			// computing it per segment cost a cross product and a square root on every iteration.
+			var rotationAxis = Vector3.Cross(towards, from);
+			if (rotationAxis.sqrMagnitude < 1e-8f) return; // parallel inputs describe no arc
+			rotationAxis.Normalize();
 
 			var start = from.normalized * radius;
 			var previous = centre + start;
 
 			for (var i = 1; i <= segments; i++)
 			{
-				var rotation = Quaternion.AngleAxis(degrees * i / segments, Vector3.Cross(axis, from).normalized);
+				var rotation = Quaternion.AngleAxis(degrees * i / segments, rotationAxis);
 				var next = centre + rotation * start;
 				Gizmos.DrawLine(previous, next);
 				previous = next;

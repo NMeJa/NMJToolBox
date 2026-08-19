@@ -41,7 +41,11 @@
     never supported `Dictionary<,>`; marking one `[SerializeField]` does nothing, silently. The
     drawer keeps duplicate and empty keys visible while editing instead of discarding them.
   - `GizmoUtils` — arrows, arcs, view cones, and a wire capsule matching `CapsuleCollider`, none of
-    which `Gizmos` provides.
+    which `Gizmos` provides. `DrawArrow` clamps its head to half the shaft so a short arrow cannot
+    render inverted, clamps `headAngle` below the angle where `tan` diverges, and closes the head
+    into a pyramid so it stays readable edge-on. The direction-based form is named `DrawArrowRay`
+    rather than being an overload: both would start (Vector3, Vector3, float), so a three-argument
+    call could not be distinguished by the compiler or by a reader.
 
 ### Added — editor
 
