@@ -1,5 +1,61 @@
 # NMJToolBox version history
 
+## v2.1.0
+
+### Added — Pooling (runtime)
+
+  - Inspector-driven object pooling built **on top of** `UnityEngine.Pool.ObjectPool<T>` rather than
+    replacing it. `PoolManager` holds a list of `PrefabPool`s configured entirely in the inspector;
+    `PoolSpawner` and `ReturnToPool` cover spawning and despawning with no code at all, and every
+    entry point is UnityEvent-compatible.
+  - Instances are positioned and parented **before** activation, so `OnEnable`, particle systems and
+    physics see the correct transform on their first frame — which is not what happens if you
+    activate inside `ObjectPool<T>`'s own get callback.
+  - `PoolManager.Despawn` falls back to `Destroy` for objects that were never pooled, so it is safe
+    to use as a blanket replacement.
+  - Optional `IPoolable` (`OnSpawned`/`OnDespawned`) for state that must reset after the pool has
+    finished placing the instance.
+  - `PoolManagerEditor` shows live active/pooled counts per pool in Play mode, with a usage bar and
+    a warning when a pool has outgrown its max size.
+
+### Added — Batch Rename (editor)
+
+  - Renames many objects at once in both the Hierarchy and the Project window, with a live preview.
+  - `{}` token expressions: `{N}` name, `{N:i,c}`/`{S:i,c}` substring, `{C}`/`{I}` counters with
+    start/step/zero-padding, `{A}`/`{AU}` letter counters, `{T}` total, `{P}` parent, `{TY}` type,
+    `{E}` extension, `{U}`/`{L}`/`{TC}` casing, `{B}` beautified, `{D}` date, `{{`/`}}` literals.
+    Unknown tokens are echoed into the preview instead of vanishing.
+  - Find & replace with optional regex, prefix/suffix, trim, and a selection order that decides how
+    counters are assigned. Natural order reproduces the Hierarchy's own top-to-bottom order by
+    comparing sibling-index chains.
+  - Opens on **F2 when more than one object is selected**; a single selection still gets Unity's
+    inline rename. Unity's shortcut system disables both entries when two shortcuts claim one key,
+    so the F2 binding ships unassigned and is enabled by
+    `Tools ▸ NMJ ▸ Shortcuts ▸ Batch Rename — Take Over F2`. That takeover is lossless and reversible.
+  - Scene renames collapse into one Undo step. Asset renames are not undoable —
+    `AssetDatabase.RenameAsset` sits outside the Undo system.
+
+### Added — Create Collection (editor)
+
+  - `Ctrl+G` groups the selection under a new empty parent; `Ctrl+Shift+G` dissolves one again.
+  - The group is created as a **sibling of the selection**, not at the scene root, so grouping
+    objects deep in the hierarchy leaves them where they were.
+  - Keeps sibling order, places the pivot at the selection's bounds centre, filters out descendants
+    of already-selected objects, produces a stretched `RectTransform` for UI selections, and drops
+    into inline rename. Fully undoable.
+
+### Added — Scene view overlays (new assembly)
+
+  - **Mini Hierarchy** — a compact, searchable scene tree inside the Scene view, prefab-stage aware,
+    with expand/collapse, dimmed inactive objects, click-to-select and double-click-to-frame.
+  - **Inspector** — the selected object's inspector docked in the Scene view, built on
+    `InspectorElement` so custom editors and property drawers render exactly as they do in the real
+    Inspector.
+  - Both live in `NMJ.NMJTools.SceneView.Editor` (namespace `NMJToolBox.SceneTools`) with no
+    references to the rest of the package, so they can be lifted into their own package with a
+    single move. See **Splitting them out** in the README for why that is likely the right call.
+
+---
 ## v2.0.0
 
 ### Breaking

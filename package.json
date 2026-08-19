@@ -1,8 +1,8 @@
 {
   "name": "com.nmj_gd.nmjtoolbox",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "displayName": "NMJ ToolBox",
-  "description": "Helper scripts, runtime extensions and Editor tooling for Unity.\n\nRuntime: collection/string/parsing/UI Toolkit extension methods, a MonoBehaviour singleton base, a minimal state machine and a scene-path based SceneChanger.\n\nEditor: a state machine code generator, a project folder-structure scaffolder, AssetDatabase helpers, a transform reset hotkey, a grid instantiator, a reusable UI Toolkit list control and a component context-menu GameObject renamer.",
+  "description": "Helper scripts, runtime extensions and Editor tooling for Unity.\n\nRuntime: inspector-driven object pooling built on UnityEngine.Pool, collection/string/parsing/UI Toolkit extension methods, a MonoBehaviour singleton base, a minimal state machine and a scene-path based SceneChanger.\n\nEditor: batch rename with {token} expressions for the Hierarchy and Project window, Create/Dissolve Collection grouping, Mini Hierarchy and Inspector overlays for the Scene view, a state machine code generator, a project folder-structure scaffolder, AssetDatabase helpers, a transform reset hotkey, a grid instantiator, a reusable UI Toolkit list control and a component context-menu GameObject renamer.",
   "unity": "2021.2",
   "keywords": [
     "NMJ",
@@ -13,6 +13,10 @@
     "Helper Scripts",
     "Extensions",
     "Inspector",
+    "ObjectPool",
+    "Pooling",
+    "BatchRename",
+    "Overlay",
     "StateMachine",
     "Automatization"
   ],
