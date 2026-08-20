@@ -51,7 +51,7 @@ namespace NMJTools.Scaffolding
 		};
 
 		/// <summary>
-		/// Folder paths cleaned up and de-duplicated: separators normalised, blanks and stray
+		/// Folder paths cleaned up and deduplicated: separators normalized, blanks and stray
 		/// slashes dropped. Windows habits produce backslashes and trailing slashes, and both make
 		/// <see cref="UnityEditor.AssetDatabase"/> calls fail silently rather than loudly.
 		/// </summary>

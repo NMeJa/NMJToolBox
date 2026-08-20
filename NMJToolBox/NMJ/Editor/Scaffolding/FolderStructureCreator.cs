@@ -11,21 +11,21 @@ namespace NMJTools.Scaffolding
 	/// <summary>What a scaffold run actually did, so the caller can report it in one line.</summary>
 	public class ScaffoldResult
 	{
-		public readonly List<string> Created = new();
-		public readonly List<string> AlreadyExisted = new();
-		public readonly List<string> Failed = new();
-		public int GitKeepsWritten;
-		public int AssemblyDefinitionsCreated;
-		public bool ReadmeWritten;
+		public readonly List<string> created = new();
+		public readonly List<string> alreadyExisted = new();
+		public readonly List<string> failed = new();
+		public int gitKeepsWritten;
+		public int assemblyDefinitionsCreated;
+		public bool readmeWritten;
 
 		public string Summary()
 		{
-			var parts = new List<string> { $"{Created.Count} folder(s) created" };
-			if (AlreadyExisted.Count > 0) parts.Add($"{AlreadyExisted.Count} already existed");
-			if (Failed.Count > 0) parts.Add($"{Failed.Count} FAILED");
-			if (GitKeepsWritten > 0) parts.Add($"{GitKeepsWritten} .gitkeep");
-			if (AssemblyDefinitionsCreated > 0) parts.Add($"{AssemblyDefinitionsCreated} asmdef");
-			if (ReadmeWritten) parts.Add("README.md");
+			var parts = new List<string> { $"{created.Count} folder(s) created" };
+			if (alreadyExisted.Count > 0) parts.Add($"{alreadyExisted.Count} already existed");
+			if (failed.Count > 0) parts.Add($"{failed.Count} FAILED");
+			if (gitKeepsWritten > 0) parts.Add($"{gitKeepsWritten} .gitkeep");
+			if (assemblyDefinitionsCreated > 0) parts.Add($"{assemblyDefinitionsCreated} asmdef");
+			if (readmeWritten) parts.Add("README.md");
 			return string.Join(", ", parts);
 		}
 	}
@@ -88,14 +88,14 @@ namespace NMJTools.Scaffolding
 				{
 					if (AssetDatabase.IsValidFolder(path))
 					{
-						result.AlreadyExisted.Add(path);
+						result.alreadyExisted.Add(path);
 						continue;
 					}
 
 					var lastSlash = path.LastIndexOf('/');
 					if (lastSlash <= 0)
 					{
-						result.Failed.Add(path);
+						result.failed.Add(path);
 						continue;
 					}
 
@@ -105,8 +105,8 @@ namespace NMJTools.Scaffolding
 					// CreateFolder returns the new folder's GUID, or an empty string on failure —
 					// discarding it is how a silent no-op looks like success.
 					var guid = AssetDatabase.CreateFolder(parent, folderName);
-					if (string.IsNullOrEmpty(guid)) result.Failed.Add(path);
-					else result.Created.Add(path);
+					if (string.IsNullOrEmpty(guid)) result.failed.Add(path);
+					else result.created.Add(path);
 				}
 			}
 			finally
@@ -117,9 +117,9 @@ namespace NMJTools.Scaffolding
 			AssetDatabase.Refresh();
 
 			// The rest needs the folders to exist on disk, so it runs after the transaction closes.
-			if (layout.createGitKeep) result.GitKeepsWritten = WriteGitKeeps(paths);
-			if (layout.createReadme) result.ReadmeWritten = WriteReadme(layout, paths.First());
-			if (layout.createAssemblyDefinitions) result.AssemblyDefinitionsCreated = WriteAssemblyDefinitions(layout, paths);
+			if (layout.createGitKeep) result.gitKeepsWritten = WriteGitKeeps(paths);
+			if (layout.createReadme) result.readmeWritten = WriteReadme(layout, paths.First());
+			if (layout.createAssemblyDefinitions) result.assemblyDefinitionsCreated = WriteAssemblyDefinitions(paths);
 
 			if (layout.createGitKeep || layout.createReadme || layout.createAssemblyDefinitions)
 				AssetDatabase.Refresh();
@@ -206,7 +206,7 @@ namespace NMJTools.Scaffolding
 		/// does not degrade — it stops the whole assembly compiling. The GUID is read back from the
 		/// runtime asmdef after importing it, so it cannot be mistyped.
 		/// </summary>
-		private static int WriteAssemblyDefinitions(FolderLayout layout, IReadOnlyList<string> paths)
+		private static int WriteAssemblyDefinitions(IReadOnlyList<string> paths)
 		{
 			var rootPath = paths.First();
 			var rootName = FolderLayout.SanitiseFolderName(Path.GetFileName(rootPath))?.TrimStart('_');

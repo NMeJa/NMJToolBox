@@ -69,7 +69,7 @@ namespace NMJTools.Scaffolding
 						 : projectTemplates[templateIndex - builtInCount].CloneLayout();
 		}
 
-		/// <summary>Defaults the target to the selected Project-window folder, if there is one.</summary>
+		/// <summary>Defaults the target to the selected Project-window folder if there is one.</summary>
 		private void UseSelectionAsTarget()
 		{
 			var selected = Selection.activeObject;
@@ -297,9 +297,9 @@ namespace NMJTools.Scaffolding
 
 			var result = FolderStructureCreator.Create(layout, targetParent);
 
-			if (result.Failed.Count > 0)
+			if (result.failed.Count > 0)
 				Debug.LogError($"[NMJ] Folder structure: {result.Summary()}\nFailed:\n  " +
-							   string.Join("\n  ", result.Failed));
+							   string.Join("\n  ", result.failed));
 			else
 				Debug.Log($"[NMJ] Folder structure ({layout.layoutName}): {result.Summary()}");
 

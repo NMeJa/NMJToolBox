@@ -18,6 +18,7 @@ namespace NMJTools.Scaffolding
 	{
 		[SerializeField] private FolderLayout layout = new();
 
+		// ReSharper disable once UnusedMember.Global
 		public FolderLayout Layout => layout;
 
 		/// <summary>A copy, so the window can edit freely without dirtying the asset.</summary>
