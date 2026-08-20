@@ -93,7 +93,7 @@ namespace NMJTools.SceneTools
 
 			// Objects can be destroyed between being recorded and being revisited; a null in the
 			// array would clear the whole selection instead of restoring the survivors.
-			var alive = entries[index].Where(o => o != null).ToArray();
+			var alive = entries[index].Where(o => o).ToArray();
 			if (alive.Length == 0)
 			{
 				entries.RemoveAt(index);

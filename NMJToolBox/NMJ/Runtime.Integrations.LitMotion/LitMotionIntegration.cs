@@ -99,7 +99,7 @@ namespace NMJTools.Integrations
 							.WithEase(outEase)
 							.WithOnComplete(() =>
 								{
-									if (this != null) PoolManager.Despawn(gameObject);
+									if (this) PoolManager.Despawn(gameObject);
 								})
 							.BindToLocalScale(transform);
 		}
@@ -116,7 +116,7 @@ namespace NMJTools.Integrations
 											  float duration = 0.15f, Ease ease = Ease.OutBack)
 		{
 			var instance = PoolManager.Spawn(poolId, position, rotation);
-			if (instance == null) return null;
+			if (!instance) return null;
 
 			var target = instance.transform;
 			var scale = target.localScale;

@@ -44,7 +44,8 @@ namespace NMJTools.Extensions
 			const string extension = ".uss";
 			var correctedPath = path.TrimStart(AssetPath).TrimEnd(extension);
 			var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(AssetPath + correctedPath + extension);
-			return styleSheet ?? throw new NullReferenceException("StyleSheet/USS is null! Path was incorrect");
+			if (!styleSheet) throw new NullReferenceException("StyleSheet/USS is null! Path was incorrect");
+			return styleSheet;
 		}
 
 		public static StyleSheet LoadUssWithName(string name)
@@ -67,7 +68,8 @@ namespace NMJTools.Extensions
 			}
 
 			var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(styleSheetPath);
-			return styleSheet ?? throw new NullReferenceException("StyleSheet/USS is null! Path was incorrect");
+			if (!styleSheet) throw new NullReferenceException("StyleSheet/USS is null! Path was incorrect");
+			return styleSheet;
 		}
 
 		/// <summary>
@@ -82,7 +84,8 @@ namespace NMJTools.Extensions
 			const string extension = ".uxml";
 			var correctedPath = path.TrimStart(AssetPath).TrimEnd(extension);
 			var uxml = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(AssetPath + correctedPath + extension);
-			return uxml ?? throw new NullReferenceException("VisualTreeAsset/UXML is null! Path was incorrect");
+			if (!uxml) throw new NullReferenceException("VisualTreeAsset/UXML is null! Path was incorrect");
+			return uxml;
 		}
 
 		/// <summary>
@@ -112,7 +115,8 @@ namespace NMJTools.Extensions
 			}
 
 			var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(visualTreePath);
-			return visualTree ?? throw new NullReferenceException("VisualTreeAsset/UXML is null! Path was incorrect");
+			if (!visualTree) throw new NullReferenceException("VisualTreeAsset/UXML is null! Path was incorrect");
+			return visualTree;
 		}
 
 		public static List<SceneAsset> GetAllScenes(SerializedProperty scenesProperty)
@@ -122,7 +126,7 @@ namespace NMJTools.Extensions
 			{
 				var path = scenesProperty.GetArrayElementAtIndex(i).stringValue;
 				var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
-				if (sceneAsset is null) throw new NullReferenceException("SceneAsset is null! Path was incorrect");
+				if (!sceneAsset) throw new NullReferenceException("SceneAsset is null! Path was incorrect");
 				scenes.Add(sceneAsset);
 			}
 

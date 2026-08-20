@@ -29,7 +29,7 @@ namespace NMJTools.Integrations
 		public static async UniTask DespawnAfterAsync(this GameObject instance, float seconds,
 													 bool unscaledTime = false, CancellationToken token = default)
 		{
-			if (instance == null) return;
+			if (!instance) return;
 
 			// Tie the delay to the instance so a despawn (or a scene unload) cancels it instead of
 			// firing later against a recycled object that now belongs to someone else.
@@ -45,7 +45,7 @@ namespace NMJTools.Integrations
 				return;
 			}
 
-			if (instance != null) PoolManager.Despawn(instance);
+			if (instance) PoolManager.Despawn(instance);
 		}
 
 		/// <summary>Spawns, waits, then returns — a one-shot effect in a single await.</summary>
@@ -53,7 +53,7 @@ namespace NMJTools.Integrations
 												  float seconds, CancellationToken token = default)
 		{
 			var instance = PoolManager.Spawn(poolId, position, rotation);
-			if (instance == null) return;
+			if (!instance) return;
 
 			await instance.DespawnAfterAsync(seconds, false, token);
 		}
@@ -121,7 +121,7 @@ namespace NMJTools.Integrations
 				return;
 			}
 
-			if (this != null && gameObject.activeSelf) PoolManager.Despawn(gameObject);
+			if (this && gameObject.activeSelf) PoolManager.Despawn(gameObject);
 		}
 
 		/// <summary>Returns immediately. Wire into a UnityEvent.</summary>

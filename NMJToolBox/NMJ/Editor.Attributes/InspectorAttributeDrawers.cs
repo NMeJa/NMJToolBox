@@ -56,9 +56,9 @@ namespace NMJTools.Attributes
 		/// </summary>
 		private static bool IsMissing(SerializedProperty property) => property.propertyType switch
 		{
-			SerializedPropertyType.ObjectReference => property.objectReferenceValue == null,
+			SerializedPropertyType.ObjectReference => !property.objectReferenceValue,
 			SerializedPropertyType.String => string.IsNullOrWhiteSpace(property.stringValue),
-			SerializedPropertyType.ExposedReference => property.exposedReferenceValue == null,
+			SerializedPropertyType.ExposedReference => !property.exposedReferenceValue,
 			SerializedPropertyType.ManagedReference => property.managedReferenceValue == null,
 			_ => false
 		};

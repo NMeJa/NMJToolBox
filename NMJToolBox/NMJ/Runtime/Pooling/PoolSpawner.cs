@@ -57,7 +57,7 @@ namespace NMJTools.Pooling
 
 		private Transform Origin => spawnAt switch
 		{
-			SpawnAt.SpawnPoint  => spawnPoint != null ? spawnPoint : transform,
+			SpawnAt.SpawnPoint  => spawnPoint ? spawnPoint : transform,
 			SpawnAt.WorldOrigin => null,
 			_                   => transform
 		};
