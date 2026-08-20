@@ -1,4 +1,4 @@
-namespace NMJTools.Patterns.StateMachine
+namespace NMJTools.Patterns
 {
 	[System.Serializable]
 	public abstract class State

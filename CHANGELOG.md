@@ -1,5 +1,61 @@
 # NMJToolBox version history
 
+## v3.0.0
+
+### Breaking — namespaces
+
+  - Root namespace is now **`NMJTools`** (was `NMJToolBox`), and every file's namespace mirrors its
+    folder under the assembly root, per the usual C# convention. Consumers must update their
+    `using` directives; the package and repository names are unchanged.
+  - Full map is documented under **Namespaces** in the README.
+
+### Fixed — namespace collisions
+
+  These are why several folders were renamed. A namespace segment under `NMJTools` shadows any Unity
+  namespace or class of the same name for *every* namespace nested beneath it, because C# resolves
+  enclosing namespaces before `using` directives — so one badly-named folder poisons the whole
+  package, not just its own files.
+
+  - **`Runtime/Gizmos/` → `Runtime/Debugging/`.** `NMJTools.Gizmos` made `UnityEngine.Gizmos`
+    unreachable package-wide. `GizmoUtils.cs` had been forced to write `UnityEngine.Gizmos.DrawLine`
+    on 25 lines, and `PoolSpawner.cs` on 4 more — despite living in a different namespace and never
+    referencing `GizmoUtils`. Both are back to plain `Gizmos.`.
+  - **`Runtime/Serialization/` → `Runtime/Serializables/`.** Same shadowing of
+    `UnityEngine.Serialization`; `SceneChanger` no longer needs
+    `[UnityEngine.Serialization.FormerlySerializedAs]`.
+  - **`Runtime/Patterns/StateMachine/` flattened into `Runtime/Patterns/`.** A folder named after a
+    class inside it made `StateMachine` resolve to the namespace from anywhere else — the same
+    defect as the `Elinis.PlayerPrefsManager` collision fixed in the PlayerPrefs split.
+  - **`Editor/Build/` → `Editor/BuildTools/`**, pre-empting a shadow of `UnityEditor.Build`, which
+    `BuildTools.cs` and `PackageDetector.cs` both import for `NamedBuildTarget`.
+  - Straggler namespaces cleaned up: `NMJToolBox` in `CreateCollection.cs`, `CustomListView` in
+    `ListContainer.cs`, and the placeholder `NMJTools.WhyEvenUsing` on the singleton.
+  - `StateMachineGenerator` no longer emits `using NMJToolBox;` into generated files — a using for a
+    namespace that no longer exists, for a `Foldout` attribute this package has not shipped since
+    NaughtyAttributes was removed in v1.0.2.
+  - Broken `<see cref="GeneratorInstance.Setup.PackageDetector"/>` crefs in both integration
+    assemblies replaced — `GeneratorInstance` never existed, and the target lives in an editor
+    assembly those runtime assemblies do not reference.
+
+### Changed — file organisation
+
+  - `Beautify.cs` merged into `StringExtensions.cs`. Two static classes of string extensions in one
+    namespace were indistinguishable at every call site — extension resolution ignores the declaring
+    type — so the split only ever cost a file to open.
+  - `ParsingExtensions.cs` dispersed: `ToBoolean(float)` moved to `MathExtensions` (it is scalar
+    maths, not parsing), and `ParseJson<T>` became **`JsonExtensions.cs`**. Kept separate rather than
+    folded into `StringExtensions` because it is the only code touching Newtonsoft, and therefore the
+    only reason the package has a dependency at all — isolated, it can later move into a
+    `defineConstraints`-gated assembly like the UniTask and LitMotion integrations.
+  - `SingletonPattern<T>` renamed to **`Singleton<T>`** (`SingletonPattern.cs` → `Singleton.cs`).
+  - `Editor.SceneView/` → `Editor.SceneTools/`, and its assembly `NMJ.NMJTools.SceneView.Editor` →
+    `NMJ.NMJTools.SceneTools.Editor`, so folder, assembly and namespace agree.
+  - `Editor/EditorOnlyListView/` → `Editor/Controls/`; `Runtime/Tools/` → `Runtime/Scenes/`;
+    integration assemblies moved to `Runtime.Integrations.{UniTask,LitMotion}/`.
+  - Every asmdef's `rootNamespace` now matches what its folder produces, so Rider generates correct
+    namespaces for new files instead of reproducing the old ones.
+
+---
 ## v2.2.0
 
 ### Added — optional package integrations

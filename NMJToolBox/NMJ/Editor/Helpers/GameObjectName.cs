@@ -2,7 +2,7 @@ using NMJTools.Extensions;
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJTools
+namespace NMJTools.Helpers
 {
 	/// <summary>
 	/// Renames a GameObject after the component you invoke this on, using the beautified type name

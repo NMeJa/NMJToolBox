@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace NMJTools
+namespace NMJTools.Prefabs
 {
 	/// <summary>
 	/// Prefab operations Unity leaves to hand-work: swapping a selection for a prefab, finding every

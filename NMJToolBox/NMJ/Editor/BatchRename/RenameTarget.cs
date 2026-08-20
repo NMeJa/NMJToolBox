@@ -6,7 +6,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJTools
+namespace NMJTools.BatchRename
 {
 	/// <summary>How the selection is ordered before counters are assigned.</summary>
 	public enum RenameOrder

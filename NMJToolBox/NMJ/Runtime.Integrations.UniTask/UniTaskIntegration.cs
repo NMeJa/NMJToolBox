@@ -2,18 +2,18 @@ using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using NMJTools.Pooling;
-using NMJTools.Tools;
+using NMJTools.Scenes;
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.SceneManagement;
 
-namespace NMJTools
+namespace NMJTools.Integrations
 {
 	/// <summary>
 	/// Awaitable wrappers around the pool and <see cref="SceneChanger"/>.
 	///
 	/// This whole assembly only compiles when <c>NMJ_UNITASK</c> is set, which
-	/// <see cref="GeneratorInstance.Setup.PackageDetector"/> does automatically while UniTask is in the project. The
+	/// <c>PackageDetector</c> does automatically while UniTask is in the project. The
 	/// core NMJ ToolBox assembly never references UniTask, so the package still works without it.
 	/// </summary>
 	public static class UniTaskPoolExtensions

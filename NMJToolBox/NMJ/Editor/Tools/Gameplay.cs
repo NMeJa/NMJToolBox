@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJTools
+namespace NMJTools.Tools
 {
 	public static class GameplayTools
 	{

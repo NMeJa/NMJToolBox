@@ -9,7 +9,7 @@ https://github.com/NMeJa/NMJToolBox.git
 ```
 
 * **Unity:** 2021.2 or newer (uses C# 9 syntax: target-typed `new()`, range operators, switch expressions)
-* **Dependencies:** `com.unity.nuget.newtonsoft-json` 3.2.1 (used only by `ParsingExtensions.ParseJson<T>`)
+* **Dependencies:** `com.unity.nuget.newtonsoft-json` 3.2.1 (used only by `JsonExtensions.ParseJson<T>`)
 * **License:** MIT
 
 > The **PlayerPrefs Manager** that used to live in this package now ships separately —
@@ -23,16 +23,42 @@ https://github.com/NMeJa/NMJToolBox.git
 | --- | --- | --- |
 | Runtime | `NMJ.NMJTools.Runtime` | `NMJToolBox/NMJ/Runtime/` |
 | Editor | `NMJ.NMJTools.Editor` | `NMJToolBox/NMJ/Editor/` |
-| Scene view overlays | `NMJ.NMJTools.SceneView.Editor` | `NMJToolBox/NMJ/Editor.SceneView/` |
+| Scene view overlays | `NMJ.NMJTools.SceneTools.Editor` | `NMJToolBox/NMJ/Editor.SceneTools/` |
 | Inspector attributes *(opt-in)* | `NMJ.NMJTools.Attributes` (+ `.Editor`) | `NMJToolBox/NMJ/Runtime.Attributes/`, `Editor.Attributes/` |
-| UniTask integration *(opt-in)* | `NMJ.NMJTools.UniTask` | `NMJToolBox/NMJ/Runtime.UniTask/` |
-| LitMotion integration *(opt-in)* | `NMJ.NMJTools.LitMotion` | `NMJToolBox/NMJ/Runtime.LitMotion/` |
-
-Namespace: `NMJToolBox`, except the scene-view overlays (`NMJToolBox.SceneTools`), the setup tooling
-(`NMJToolBox.Setup`) and `ListContainer` (`CustomListView`).
+| UniTask integration *(opt-in)* | `NMJ.NMJTools.UniTask` | `NMJToolBox/NMJ/Runtime.Integrations.UniTask/` |
+| LitMotion integration *(opt-in)* | `NMJ.NMJTools.LitMotion` | `NMJToolBox/NMJ/Runtime.Integrations.LitMotion/` |
 
 The *opt-in* assemblies are gated by `defineConstraints` and compile only when the matching package
 is present — see [Optional package integrations](#optional-package-integrations).
+
+### Namespaces
+
+Namespaces mirror folders under each assembly root, per the usual C# convention:
+
+| Folder | Namespace | | Folder | Namespace |
+| --- | --- | --- | --- | --- |
+| `Runtime/Extensions` | `NMJTools.Extensions` | | `Editor/BatchRename` | `NMJTools.BatchRename` |
+| `Runtime/Pooling` | `NMJTools.Pooling` | | `Editor/BuildTools` | `NMJTools.BuildTools` |
+| `Runtime/Patterns` | `NMJTools.Patterns` | | `Editor/Controls` | `NMJTools.Controls` |
+| `Runtime/Attributes` | `NMJTools.Attributes` | | `Editor/Drawers` | `NMJTools.Drawers` |
+| `Runtime/Debugging` | `NMJTools.Debugging` | | `Editor/Hierarchy` | `NMJTools.Hierarchy` |
+| `Runtime/Serializables` | `NMJTools.Serializables` | | `Editor/Prefabs` | `NMJTools.Prefabs` |
+| `Runtime/Scenes` | `NMJTools.Scenes` | | `Editor/Setup` | `NMJTools.Setup` |
+
+> **Folder names are constrained by that convention.** A namespace segment under `NMJTools`
+> shadows any Unity namespace or class of the same name, for *every* namespace nested beneath it —
+> C# resolves enclosing namespaces before `using` directives. `Runtime/Gizmos/` made
+> `UnityEngine.Gizmos` unreachable package-wide, forcing `UnityEngine.Gizmos.DrawLine(...)` even in
+> files that had nothing to do with it. It is now `Runtime/Debugging/`.
+>
+> Segments to avoid for the same reason: **Gizmos · Editor · Serialization · Build · Rendering ·
+> Events · Audio · Video · UI · Animations · Playables · Profiling · Assertions · Scripting ·
+> SceneManagement · Search · Experimental · Compilation · Tilemaps · Pool**. `Editor` is the worst
+> of them — it would break every `: Editor` and `[CustomEditor]` class in the package.
+>
+> The same applies to your own types: a folder must not be named after a class inside it.
+> `Runtime/Patterns/StateMachine/` containing `class StateMachine` made the class unreachable by
+> its bare name from anywhere else.
 
 ### Menu items
 
@@ -86,7 +112,7 @@ Extension methods for `IEnumerable<T>`, `IList<T>`, `T[]`, `List<T>`, `Queue<T>`
 | `DequeueChunk<T>(this Queue<T>, int chunkSize)` | Lazily dequeues up to `chunkSize` items. |
 
 ```csharp
-using NMJToolBox;
+using NMJTools.Extensions;
 
 var deck = new List<Card>(allCards);
 deck.Shuffle();                       // in place
@@ -96,36 +122,33 @@ var top = deck.Pop();
 if (deck.IsEmpty()) Reshuffle();
 ```
 
-## `StringBeautifier` (file: `Extensions/Beautify.cs`)
-
-Turns identifiers into human-readable labels.
-
-| Method | `"player_healthBar"` → |
-| --- | --- |
-| `ReplaceUnderscoresWithSpaces()` | `"player healthBar"` |
-| `SplitCamelCase()` | `"player_health Bar"` |
-| `CapitalizeFirstLetter()` | Title-cases **every** word (`en-US`) |
-| `RemoveExcessWhitespace()` | Collapses runs of whitespace to one space |
-| `Beautify()` | All four, in that order → `"Player Health Bar"` |
-
-All methods return `string.Empty` for `null`/empty input.
-
 ## `StringExtensions`
 
 | Method | Description |
 | --- | --- |
 | `TrimStart(this string, string wordToRemove)` | Removes `wordToRemove` from the start, if present. |
 | `TrimEnd(this string, string wordToRemove)` | Removes `wordToRemove` from the end, if present. |
+| `ReplaceUnderscoresWithSpaces()` | `"player_healthBar"` → `"player healthBar"` |
+| `SplitCamelCase()` | `"player_healthBar"` → `"player_health Bar"` |
+| `CapitalizeFirstLetter()` | Title-cases **every** word (invariant culture) |
+| `RemoveExcessWhitespace()` | Collapses runs of whitespace to one space |
+| `Beautify()` | All four of the above, in order → `"Player Health Bar"` |
 
-> These are *string* overloads of BCL names that normally take `char[]`. The compiler picks the
-> extension only because no instance overload accepts a `string`.
+All methods return `string.Empty` for `null`/empty input.
 
-## `ParsingExtensions`
+> `TrimStart`/`TrimEnd` are *string* overloads of BCL names that normally take `char[]`. The
+> compiler picks the extension only because no instance overload accepts a `string`.
+
+## `JsonExtensions`
 
 | Method | Description |
 | --- | --- |
-| `ToBoolean(this float value, bool useAbsolute = false, bool useInverse = false, float differentialValue = 0.5f)` | Threshold a float into a bool. `useAbsolute` applies `Math.Abs` first; `useInverse` flips the comparison to `<`. |
 | `ParseJson<T>(this string json)` | `JsonConvert.DeserializeObject<T>`, rethrowing with the offending JSON in the message. |
+
+Kept in its own file deliberately: this is the only code in the package that touches Newtonsoft, and
+therefore the only reason `com.unity.nuget.newtonsoft-json` is a dependency at all. Isolated, it can
+later move into a `defineConstraints`-gated assembly — the same pattern the UniTask and LitMotion
+integrations use — leaving the package with no hard dependencies.
 
 ## `UIToolkitExtensions`
 
@@ -134,12 +157,12 @@ All methods return `string.Empty` for `null`/empty input.
 | `DisplayVisibility(this IStyle, DisplayStyle)` | Sets `style.display`. |
 | `ChangeBackgroundColor(this IStyle, Color)` | Sets `style.backgroundColor`. |
 
-## `SingletonPattern<T>`
+## `Singleton<T>`
 
 `[DefaultExecutionOrder(-10)]` abstract `MonoBehaviour` singleton base.
 
 ```csharp
-public class AudioManager : SingletonPattern<AudioManager>
+public class AudioManager : Singleton<AudioManager>
 {
     protected override void PersonalAwake() { /* your Awake code */ }
 }
@@ -187,7 +210,8 @@ fsm.Change(new RunState());                    // Exit() old → Enter() new
 square root), `Abs()`, `SnapToGrid()`, `Bounds.RandomPointInside()`.
 
 `MathExtensions` · `Remap` / `RemapClamped` / `Normalize`, `Approximately(other, tolerance)`,
-`Wrap` (int and float, negatives handled — unlike `%`), `IsBetween`, `PercentBetween`, `SnapTo`.
+`Wrap` (int and float, negatives handled — unlike `%`), `IsBetween`, `PercentBetween`, `SnapTo`,
+`ToBoolean(useAbsolute, useInverse, threshold)`.
 
 ```csharp
 transform.position = transform.position.With(y: 0f);
@@ -255,7 +279,7 @@ values can be set from evidence rather than guesswork.
 | `Don't Destroy On Load` | Keeps the manager and its pools across scene loads. |
 
 ```csharp
-using NMJToolBox;
+using NMJTools.Pooling;
 
 var bullet = PoolManager.Spawn("Bullet", muzzle.position, muzzle.rotation);
 // ... later
@@ -405,7 +429,7 @@ the preview verbatim rather than vanishing, so typos are visible instead of sile
 | `{TY}` | — | Type name — asset type, or first non-Transform component |
 | `{E}` | — | File extension (assets only) |
 | `{U}` `{L}` `{TC}` | — | Upper / lower / Title Case |
-| `{B}` | — | Beautified — `my_healthBar` → `My Health Bar` (uses `StringBeautifier`) |
+| `{B}` | — | Beautified — `my_healthBar` → `My Health Bar` (uses `StringExtensions.Beautify`) |
 | `{D}` | format | Date, default `yyyy-MM-dd` |
 | `{{` `}}` | — | A literal `{` or `}` |
 
@@ -659,7 +683,7 @@ For working with the Scene view maximised. Both are standard Unity **Overlays** 
 the Scene view's ⋮ menu, or press `` ` `` to open the overlay picker. They can be docked to any
 edge, floated, or collapsed to icons like any built-in overlay.
 
-They live in their own assembly (`NMJ.NMJTools.SceneView.Editor`, namespace `NMJToolBox.SceneTools`)
+They live in their own assembly (`NMJ.NMJTools.SceneTools.Editor`, namespace `NMJTools.SceneTools`)
 with no references to the rest of the package — see [Splitting them out](#splitting-them-out).
 
 ## Mini Hierarchy
@@ -730,7 +754,7 @@ Everything else here (pooling, batch rename, collections) is general-purpose and
 | --- | --- | --- |
 | `NMJ.NMJTools.Runtime` | All | Newtonsoft.Json |
 | `NMJ.NMJTools.Editor` | Editor | `NMJ.NMJTools.Runtime` |
-| `NMJ.NMJTools.SceneView.Editor` | Editor | — |
+| `NMJ.NMJTools.SceneTools.Editor` | Editor | — |
 | `NMJ.NMJTools.Attributes` | All | — · gated by `NMJ_ATTRIBUTES` |
 | `NMJ.NMJTools.Attributes.Editor` | Editor | `NMJ.NMJTools.Attributes` · gated by `NMJ_ATTRIBUTES` |
 | `NMJ.NMJTools.UniTask` | All | `NMJ.NMJTools.Runtime`, UniTask · gated by `NMJ_UNITASK` |

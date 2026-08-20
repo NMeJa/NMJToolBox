@@ -8,7 +8,7 @@ using UnityEditor.Build.Reporting;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
-namespace NMJTools
+namespace NMJTools.BuildTools
 {
 	/// <summary>
 	/// Version bumping, timestamped builds, and the folder-opening commands that otherwise mean

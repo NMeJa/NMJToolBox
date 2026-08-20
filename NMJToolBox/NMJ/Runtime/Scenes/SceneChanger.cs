@@ -1,8 +1,9 @@
 using NMJTools.Attributes;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.SceneManagement;
 
-namespace NMJTools.Tools
+namespace NMJTools.Scenes
 {
 	public class SceneChanger : MonoBehaviour
 	{
@@ -10,7 +11,7 @@ namespace NMJTools.Tools
 		// [SceneReference] now provides the same scene picker and the "Add to Build Settings" button
 		// on any string field, so both of those are gone. The stored value is unchanged - still the
 		// scene's asset path - so existing prefabs and scenes keep working.
-		[UnityEngine.Serialization.FormerlySerializedAs("sceneName")]
+		[FormerlySerializedAs("sceneName")]
 		[SerializeField, SceneReference]
 		private string scenePath;
 

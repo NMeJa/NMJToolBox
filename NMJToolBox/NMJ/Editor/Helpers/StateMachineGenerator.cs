@@ -6,7 +6,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJTools
+namespace NMJTools.Helpers
 {
 	[SuppressMessage("ReSharper", "RedundantStringInterpolation")]
 	public class StateMachineGenerator : EditorWindow
@@ -147,7 +147,9 @@ namespace NMJTools
 				// do not overwrite
 				using var outfile = new StreamWriter(copyPath);
 				outfile.WriteLine($"using UnityEngine;");
-				if (useFoldoutsOnEvents) outfile.WriteLine($"using NMJToolBox;");
+				// The Foldout attribute this used to import came from NaughtyAttributes, which this package
+				// has not bundled since v1.0.2 - and NMJToolBox is no longer a namespace at all. Emitting a
+				// using for a namespace that does not exist made the generated file fail to compile.
 				if (useUnityEvents) outfile.WriteLine($"using UnityEngine.Events;");
 				outfile.WriteLine($"");
 				if (useRegions) outfile.WriteLine($"#region States");

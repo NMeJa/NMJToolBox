@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace NMJTools
+namespace NMJTools.Tools
 {
     [ExecuteAlways]
     public class InstantiateInGrid : MonoBehaviour

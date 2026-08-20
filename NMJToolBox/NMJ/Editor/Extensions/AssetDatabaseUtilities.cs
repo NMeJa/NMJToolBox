@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using NMJTools.Extensions;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace NMJTools
+namespace NMJTools.Extensions
 {
 	[SuppressMessage("ReSharper", "UnusedMember.Global")]
 	public static class AssetDatabaseUtilities

@@ -112,12 +112,12 @@ namespace NMJTools.Pooling
 			var origin = Origin;
 			var position = origin ? origin.TransformPoint(offset) : offset;
 
-			UnityEngine.Gizmos.color = new Color(0.4f, 0.85f, 1f, 0.9f);
-			UnityEngine.Gizmos.DrawWireSphere(position, 0.15f);
+			Gizmos.color = new Color(0.4f, 0.85f, 1f, 0.9f);
+			Gizmos.DrawWireSphere(position, 0.15f);
 
 			if (randomSpread == Vector3.zero) return;
-			UnityEngine.Gizmos.color = new Color(0.4f, 0.85f, 1f, 0.25f);
-			UnityEngine.Gizmos.DrawWireCube(position, randomSpread);
+			Gizmos.color = new Color(0.4f, 0.85f, 1f, 0.25f);
+			Gizmos.DrawWireCube(position, randomSpread);
 		}
 	}
 }

@@ -1,5 +1,5 @@
 {
-    "name": "NMJ.NMJTools.SceneView.Editor",
+    "name": "NMJ.NMJTools.SceneTools.Editor",
     "rootNamespace": "NMJTools.SceneTools",
     "references": [],
     "includePlatforms": [

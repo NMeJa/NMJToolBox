@@ -3,7 +3,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJTools
+namespace NMJTools.Extensions
 {
 	// ReSharper disable once UnusedType.Global
 	public static class AssetDatabaseExtensions

@@ -1,9 +1,10 @@
 {
-    "name": "NMJ.NMJTools.UniTask",
-    "rootNamespace": "NMJTools",
+    "name": "NMJ.NMJTools.LitMotion",
+    "rootNamespace": "NMJTools.Integrations",
     "references": [
         "NMJ.NMJTools.Runtime",
-        "UniTask"
+        "LitMotion",
+        "LitMotion.Extensions"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -12,7 +13,7 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [
-        "NMJ_UNITASK"
+        "NMJ_LITMOTION"
     ],
     "versionDefines": [],
     "noEngineReferences": false

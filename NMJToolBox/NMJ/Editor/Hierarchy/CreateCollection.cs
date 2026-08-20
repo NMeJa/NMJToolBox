@@ -3,7 +3,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJToolBox
+namespace NMJTools.Hierarchy
 {
 	/// <summary>
 	/// Groups the selected objects under a new empty parent — the "collection" Unity has never

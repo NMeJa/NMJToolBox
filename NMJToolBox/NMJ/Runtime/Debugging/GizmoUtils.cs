@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
 
-namespace NMJTools.Gizmos
+namespace NMJTools.Debugging
 {
 	/// <summary>
 	/// Shapes <see cref="Gizmos"/> does not provide. Call these from <c>OnDrawGizmos</c> /
@@ -26,7 +26,7 @@ namespace NMJTools.Gizmos
 		/// <param name="headAngle">Half-angle of the head in degrees.</param>
 		public static void DrawArrow(Vector3 from, Vector3 to, float headLength = 0.25f, float headAngle = 22f)
 		{
-			UnityEngine.Gizmos.DrawLine(from, to);
+			Gizmos.DrawLine(from, to);
 
 			var direction = to - from;
 			var distance = direction.magnitude;
@@ -58,21 +58,21 @@ namespace NMJTools.Gizmos
 			var top = basePoint + headUp * spread;
 			var bottom = basePoint - headUp * spread;
 
-			UnityEngine.Gizmos.DrawLine(to, right);
-			UnityEngine.Gizmos.DrawLine(to, left);
-			UnityEngine.Gizmos.DrawLine(to, top);
-			UnityEngine.Gizmos.DrawLine(to, bottom);
+			Gizmos.DrawLine(to, right);
+			Gizmos.DrawLine(to, left);
+			Gizmos.DrawLine(to, top);
+			Gizmos.DrawLine(to, bottom);
 
 			// Closing the base into a diamond makes the head read as a solid pyramid from glancing
 			// angles, where four loose fins collapse into an ambiguous cross.
-			UnityEngine.Gizmos.DrawLine(right, top);
-			UnityEngine.Gizmos.DrawLine(top, left);
-			UnityEngine.Gizmos.DrawLine(left, bottom);
-			UnityEngine.Gizmos.DrawLine(bottom, right);
+			Gizmos.DrawLine(right, top);
+			Gizmos.DrawLine(top, left);
+			Gizmos.DrawLine(left, bottom);
+			Gizmos.DrawLine(bottom, right);
 		}
 
 		/// <summary>
-		/// Arrow from an origin along a direction, mirroring <see cref="Gizmos.DrawRay(Vector3,Vector3)"/>.
+		/// Arrow from an origin along a direction, mirroring <see cref="UnityEngine.Gizmos.DrawRay(Vector3,Vector3)"/>.
 		/// </summary>
 		/// <remarks>
 		/// Deliberately not an overload of <see cref="DrawArrow"/>. Both would begin
@@ -105,7 +105,7 @@ namespace NMJTools.Gizmos
 			{
 				var angle = i / (float)segments * Mathf.PI * 2f;
 				var next = centre + right * Mathf.Cos(angle) + forward * Mathf.Sin(angle);
-				UnityEngine.Gizmos.DrawLine(previous, next);
+				Gizmos.DrawLine(previous, next);
 				previous = next;
 			}
 		}
@@ -136,10 +136,10 @@ namespace NMJTools.Gizmos
 			DrawCircle(top, up, radius, segments);
 			DrawCircle(bottom, up, radius, segments);
 
-			UnityEngine.Gizmos.DrawLine(top + right * radius, bottom + right * radius);
-			UnityEngine.Gizmos.DrawLine(top - right * radius, bottom - right * radius);
-			UnityEngine.Gizmos.DrawLine(top + forward * radius, bottom + forward * radius);
-			UnityEngine.Gizmos.DrawLine(top - forward * radius, bottom - forward * radius);
+			Gizmos.DrawLine(top + right * radius, bottom + right * radius);
+			Gizmos.DrawLine(top - right * radius, bottom - right * radius);
+			Gizmos.DrawLine(top + forward * radius, bottom + forward * radius);
+			Gizmos.DrawLine(top - forward * radius, bottom - forward * radius);
 
 			DrawArc(top, up, right, 180f, radius, segments / 2);
 			DrawArc(top, up, forward, 180f, radius, segments / 2);
@@ -175,7 +175,7 @@ namespace NMJTools.Gizmos
 			{
 				var rotation = Quaternion.AngleAxis(degrees * i / segments, rotationAxis);
 				var next = centre + rotation * start;
-				UnityEngine.Gizmos.DrawLine(previous, next);
+				Gizmos.DrawLine(previous, next);
 				previous = next;
 			}
 		}
@@ -193,15 +193,15 @@ namespace NMJTools.Gizmos
 			var left = Quaternion.AngleAxis(-half, side) * direction * distance;
 			var right = Quaternion.AngleAxis(half, side) * direction * distance;
 
-			UnityEngine.Gizmos.DrawLine(origin, origin + left);
-			UnityEngine.Gizmos.DrawLine(origin, origin + right);
+			Gizmos.DrawLine(origin, origin + left);
+			Gizmos.DrawLine(origin, origin + right);
 
 			var previous = origin + left;
 			for (var i = 1; i <= segments; i++)
 			{
 				var angle = Mathf.Lerp(-half, half, i / (float)segments);
 				var next = origin + Quaternion.AngleAxis(angle, side) * direction * distance;
-				UnityEngine.Gizmos.DrawLine(previous, next);
+				Gizmos.DrawLine(previous, next);
 				previous = next;
 			}
 		}
@@ -210,12 +210,12 @@ namespace NMJTools.Gizmos
 		public static void DrawCross(Vector3 position, float size = 0.25f)
 		{
 			var half = size * 0.5f;
-			UnityEngine.Gizmos.DrawLine(position - Vector3.right * half, position + Vector3.right * half);
-			UnityEngine.Gizmos.DrawLine(position - Vector3.up * half, position + Vector3.up * half);
-			UnityEngine.Gizmos.DrawLine(position - Vector3.forward * half, position + Vector3.forward * half);
+			Gizmos.DrawLine(position - Vector3.right * half, position + Vector3.right * half);
+			Gizmos.DrawLine(position - Vector3.up * half, position + Vector3.up * half);
+			Gizmos.DrawLine(position - Vector3.forward * half, position + Vector3.forward * half);
 		}
 
-		public static void DrawBounds(Bounds bounds) => UnityEngine.Gizmos.DrawWireCube(bounds.center, bounds.size);
+		public static void DrawBounds(Bounds bounds) => Gizmos.DrawWireCube(bounds.center, bounds.size);
 
 		/// <summary>
 		/// A polyline through the points, optionally closed. Handy for patrol routes and splines.
@@ -224,11 +224,11 @@ namespace NMJTools.Gizmos
 		{
 			if (points == null || points.Count < 2) return;
 
-			for (var i = 0; i < points.Count - 1; i++) UnityEngine.Gizmos.DrawLine(points[i], points[i + 1]);
-			if (closed) UnityEngine.Gizmos.DrawLine(points[^1], points[0]);
+			for (var i = 0; i < points.Count - 1; i++) Gizmos.DrawLine(points[i], points[i + 1]);
+			if (closed) Gizmos.DrawLine(points[^1], points[0]);
 
 			if (nodeSize <= 0f) return;
-			foreach (var point in points) UnityEngine.Gizmos.DrawWireCube(point, Vector3.one * nodeSize);
+			foreach (var point in points) Gizmos.DrawWireCube(point, Vector3.one * nodeSize);
 		}
 
 		/// <summary>

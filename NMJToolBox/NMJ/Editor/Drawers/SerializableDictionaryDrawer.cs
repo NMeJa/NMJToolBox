@@ -1,9 +1,9 @@
 using System.Collections.Generic;
-using NMJTools.Serialization;
+using NMJTools.Serializables;
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJTools
+namespace NMJTools.Drawers
 {
 	/// <summary>
 	/// Draws a <see cref="SerializableDictionary{TKey,TValue}"/> as paired key/value rows instead of

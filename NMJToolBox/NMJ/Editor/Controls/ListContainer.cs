@@ -10,7 +10,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 // ReSharper disable once CheckNamespace
-namespace CustomListView
+namespace NMJTools.Controls
 {
 	[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 	public class ListContainer : VisualElement

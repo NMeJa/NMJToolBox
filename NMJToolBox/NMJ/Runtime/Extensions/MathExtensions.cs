@@ -70,5 +70,18 @@ namespace NMJTools.Extensions
 		/// <summary>Rounds to the nearest multiple of <paramref name="step"/>.</summary>
 		public static float SnapTo(this float value, float step) =>
 			step <= 0f ? value : Mathf.Round(value / step) * step;
+
+		/// <summary>
+		/// Thresholds a float into a bool. Moved here from ParsingExtensions, which had nothing to do
+		/// with parsing in this case — it is scalar maths.
+		/// </summary>
+		/// <param name="useAbsolute">Compare the magnitude, ignoring sign.</param>
+		/// <param name="useInverse">Flip the comparison, so the result is true <em>below</em> the threshold.</param>
+		public static bool ToBoolean(this float value, bool useAbsolute = false, bool useInverse = false,
+									 float differentialValue = 0.5f)
+		{
+			if (useAbsolute) value = Mathf.Abs(value);
+			return useInverse ? value < differentialValue : value > differentialValue;
+		}
 	}
 }

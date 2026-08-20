@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace NMJTools.Serialization
+namespace NMJTools.Serializables
 {
 	/// <summary>
 	/// A <see cref="Dictionary{TKey,TValue}"/> Unity can serialize.

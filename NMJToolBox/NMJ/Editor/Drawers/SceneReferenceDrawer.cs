@@ -3,7 +3,7 @@ using NMJTools.Attributes;
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJTools
+namespace NMJTools.Drawers
 {
 	/// <summary>
 	/// Drawer for <see cref="SceneReferenceAttribute"/>. Shows a <c>SceneAsset</c> object field but

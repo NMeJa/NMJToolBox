@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace NMJTools
+namespace NMJTools.Attributes
 {
 	/// <summary>
 	/// Shows a field in the inspector but blocks editing. Useful for values written by code that you

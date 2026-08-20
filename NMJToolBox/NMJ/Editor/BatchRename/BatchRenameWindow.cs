@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
-namespace NMJTools
+namespace NMJTools.BatchRename
 {
 	/// <summary>
 	/// Batch rename for Hierarchy objects and Project assets.

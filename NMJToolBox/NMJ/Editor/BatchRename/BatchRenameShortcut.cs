@@ -2,7 +2,7 @@ using UnityEditor;
 using UnityEditor.ShortcutManagement;
 using UnityEngine;
 
-namespace NMJTools
+namespace NMJTools.BatchRename
 {
 	/// <summary>
 	/// Routes F2 to the right renamer: the batch window for a multi-selection, Unity's own inline

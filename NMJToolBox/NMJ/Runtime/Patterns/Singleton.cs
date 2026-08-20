@@ -1,10 +1,10 @@
 using UnityEngine;
 
 // ReSharper disable once CheckNamespace
-namespace NMJTools.WhyEvenUsing
+namespace NMJTools.Patterns
 {
 	[DefaultExecutionOrder(-10)]
-	public abstract class SingletonPattern<T> : MonoBehaviour where T : MonoBehaviour
+	public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 	{
 		[SerializeField] protected bool dontDestroy = false;
 

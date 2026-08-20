@@ -4,7 +4,7 @@ using System.Text;
 using NMJTools.Extensions;
 using UnityEngine;
 
-namespace NMJTools
+namespace NMJTools.BatchRename
 {
 	/// <summary>
 	/// Per-item data a <see cref="RenamePattern"/> token can read.
