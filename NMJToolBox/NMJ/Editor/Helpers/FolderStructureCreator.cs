@@ -22,16 +22,25 @@ namespace NMJTools.Helpers
 
 			var runtimeFolders = new[]
 			{
-				$"{mainFolderPath}/Runtime/Scenes",
 				$"{mainFolderPath}/Runtime/Scripts",
-				$"{mainFolderPath}/Runtime/Materials",
-				$"{mainFolderPath}/Runtime/Textures",
-				$"{mainFolderPath}/Runtime/Prefabs",
-				$"{mainFolderPath}/Runtime/Audio",
-				$"{mainFolderPath}/Runtime/Animations",
-				$"{mainFolderPath}/Runtime/Fonts",
-				$"{mainFolderPath}/Runtime/Resources",
-				$"{mainFolderPath}/Runtime/ScriptableObjects",
+				$"{mainFolderPath}/Runtime/Scenes/Gameplay",
+				$"{mainFolderPath}/Runtime/Scenes/Testing",
+				$"{mainFolderPath}/Runtime/Prefabs/UI",
+				$"{mainFolderPath}/Runtime/Prefabs/Gameplay",
+				$"{mainFolderPath}/Runtime/Prefabs/Environment",
+				$"{mainFolderPath}/Runtime/Art/Animations",
+				$"{mainFolderPath}/Runtime/Art/Materials",
+				$"{mainFolderPath}/Runtime/Art/Models",
+				$"{mainFolderPath}/Runtime/Art/Shaders",
+				$"{mainFolderPath}/Runtime/Art/Textures",
+				$"{mainFolderPath}/Runtime/Art/VFX",
+				$"{mainFolderPath}/Runtime/Audio/Music",
+				$"{mainFolderPath}/Runtime/Audio/SFX",
+				$"{mainFolderPath}/Runtime/Audio/Ambience",
+				$"{mainFolderPath}/Runtime/Data/ScriptableObjects",
+				$"{mainFolderPath}/Runtime/Settings",
+				$"{mainFolderPath}/Runtime/UI/Fonts",
+				$"{mainFolderPath}/Runtime/UI/Icons"
 			};
 
 			CreateFolders(editorFolders);

@@ -2,7 +2,6 @@ using LitMotion;
 using LitMotion.Extensions;
 using NMJTools.Pooling;
 using UnityEngine;
-using UnityEngine.Audio;
 
 namespace NMJTools.Integrations
 {
@@ -17,6 +16,7 @@ namespace NMJTools.Integrations
 	{
 		private enum Transition
 		{
+			// ReSharper disable once UnusedMember.Local
 			ScaleOut,
 			ScaleInThenOut,
 			None
@@ -43,7 +43,7 @@ namespace NMJTools.Integrations
 
 		private void Awake()
 		{
-			// Captured once, before any tween has touched the transform. Reading it on enable would
+			// Captured once, before any tween has touched the transform. Reading it on enabling would
 			// eventually capture a mid-tween scale from a previous use and shrink the object a little
 			// more on every spawn.
 			baseScale = transform.localScale;
@@ -106,12 +106,14 @@ namespace NMJTools.Integrations
 	}
 
 	/// <summary>Spawn helpers that add a motion in one call.</summary>
+	// ReSharper disable once UnusedType.Global
 	public static class PoolMotionExtensions
 	{
 		/// <summary>
-		/// Spawns from a pool and pops it in from zero scale. Returns the instance so the caller can
+		/// Spawns from a pool and pops it in from a zero scale. Returns the instance so the caller can
 		/// keep configuring it.
 		/// </summary>
+		// ReSharper disable once UnusedMember.Global
 		public static GameObject SpawnWithPop(string poolId, Vector3 position, Quaternion rotation,
 											  float duration = 0.15f, Ease ease = Ease.OutBack)
 		{

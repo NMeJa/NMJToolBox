@@ -4,7 +4,7 @@ using UnityEngine;
 namespace NMJTools.Patterns
 {
 	[DefaultExecutionOrder(-10)]
-	public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
+	public abstract class SingletonBase<T> : MonoBehaviour where T : MonoBehaviour
 	{
 		[SerializeField] protected bool dontDestroy = false;
 

@@ -75,8 +75,11 @@ namespace NMJTools.Extensions
 		/// Thresholds a float into a bool. Moved here from ParsingExtensions, which had nothing to do
 		/// with parsing in this case — it is scalar maths.
 		/// </summary>
+		/// <param name="value">The floating-point scalar value to evaluate.</param>
 		/// <param name="useAbsolute">Compare the magnitude, ignoring sign.</param>
 		/// <param name="useInverse">Flip the comparison, so the result is true <em>below</em> the threshold.</param>
+		/// <param name="differentialValue">The cutoff threshold value to compare against (defaults to 0.5).</param>
+		/// <returns><see langword="true"/> if the value satisfies the threshold condition; otherwise, <see langword="false"/>.</returns>
 		public static bool ToBoolean(this float value, bool useAbsolute = false, bool useInverse = false,
 									 float differentialValue = 0.5f)
 		{

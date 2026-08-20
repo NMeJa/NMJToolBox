@@ -84,8 +84,7 @@ namespace NMJTools.Extensions
 			const string extension = ".uxml";
 			var correctedPath = path.TrimStart(AssetPath).TrimEnd(extension);
 			var uxml = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(AssetPath + correctedPath + extension);
-			if (!uxml) throw new NullReferenceException("VisualTreeAsset/UXML is null! Path was incorrect");
-			return uxml;
+			return !uxml ? throw new NullReferenceException("VisualTreeAsset/UXML is null! Path was incorrect") : uxml;
 		}
 
 		/// <summary>
@@ -115,8 +114,7 @@ namespace NMJTools.Extensions
 			}
 
 			var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(visualTreePath);
-			if (!visualTree) throw new NullReferenceException("VisualTreeAsset/UXML is null! Path was incorrect");
-			return visualTree;
+			return !visualTree ? throw new NullReferenceException("VisualTreeAsset/UXML is null! Path was incorrect") : visualTree;
 		}
 
 		public static List<SceneAsset> GetAllScenes(SerializedProperty scenesProperty)

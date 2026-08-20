@@ -1,0 +1,19 @@
+{
+    "name": "NMJ.NMJTools.Newtonsoft",
+    "rootNamespace": "NMJTools.Integrations",
+    "references": [
+        "NMJ.NMJTools.Runtime",
+        "Newtonsoft"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "NMJ_NEWTONSOFT"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

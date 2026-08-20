@@ -9,11 +9,11 @@ namespace NMJTools.Extensions
 	public static class AssetDatabaseExtensions
 	{
 		/// <summary>
-		/// Quickly Create Scriptable Object at a specified path without worrying about folder and sub-folders existence
+		/// Quickly Create Scriptable Object at a specified path without worrying about folder and subfolders existence
 		/// </summary>
 		/// <param name="instance"></param>
-		/// <param name="folderPath">Folder Path should start with 'Assets/'. NOTE. can use AssetDatabaseExtensions.AssetPath constant</param>
-		/// <param name="objectName">What to name the asset. NOTE! it doesn't need File Format</param>
+		/// <param name="folderPath">Folder Path should start with 'Assets/'. NOTE. Can use AssetDatabaseExtensions.AssetPath constant</param>
+		/// <param name="objectName">What to name the asset. NOTE! It doesn't need File Format</param>
 		// ReSharper disable once UnusedMember.Global
 		public static void CreateAsset(this ScriptableObject instance, string folderPath, string objectName)
 		{

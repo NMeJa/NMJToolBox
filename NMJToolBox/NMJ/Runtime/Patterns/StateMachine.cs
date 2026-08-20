@@ -1,5 +1,6 @@
 namespace NMJTools.Patterns
 {
+	// ReSharper disable once UnusedType.Global
 	public class StateMachine
 	{
 		private State current;
@@ -10,6 +11,7 @@ namespace NMJTools.Patterns
 			current.Enter();
 		}
 
+		// ReSharper disable once UnusedMember.Global
 		public void Change(State nextState)
 		{
 			current.Exit();

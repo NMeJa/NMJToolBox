@@ -13,6 +13,7 @@ namespace NMJTools.Debugging
 	/// <see cref="CapsuleCollider"/>, arcs for cones of vision, and text.
 	/// </summary>
 	[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+	[SuppressMessage("ReSharper", "UnusedMember.Global")]
 	// ReSharper disable once UnusedType.Global
 	public static class GizmoUtils
 	{

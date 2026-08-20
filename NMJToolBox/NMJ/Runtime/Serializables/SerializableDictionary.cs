@@ -19,7 +19,7 @@ namespace NMJTools.Serializables
 	/// Unity 2020.1+ serializes generic fields directly, so no subclass is required. Declaring one
 	/// anyway still works and gives the type a friendlier name in the inspector:
 	/// <code>
-	/// [Serializable] public class ScoreTable : SerializableDictionary&lt;string, int&gt; { }
+	/// [Serializable] public class ScoreTable: SerializableDictionary&lt;string, int&gt; { }
 	/// </code>
 	/// </summary>
 	[Serializable]
@@ -46,7 +46,7 @@ namespace NMJTools.Serializables
 
 		public void OnBeforeSerialize()
 		{
-			// Rebuilding both lists from scratch keeps them exactly in step. Trying to patch them
+			// Rebuilding both lists from scratch keeps them exactly in a step. Trying to patch them
 			// incrementally is where parallel-list implementations usually go wrong.
 			keys.Clear();
 			values.Clear();

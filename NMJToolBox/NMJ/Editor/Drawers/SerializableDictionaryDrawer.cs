@@ -20,7 +20,7 @@ namespace NMJTools.Drawers
 		private const float ButtonWidth = 22f;
 		private const float KeyRatio = 0.42f;
 
-		private static readonly Color DuplicateTint = new(1f, 0.4f, 0.4f, 0.25f);
+		private static readonly Color duplicateTint = new(1f, 0.4f, 0.4f, 0.25f);
 
 		public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
 		{
@@ -93,7 +93,7 @@ namespace NMJTools.Drawers
 					var rowRect = EditorGUI.IndentedRect(new Rect(row.x, row.y, row.width, height));
 
 					if (duplicates.Contains(i))
-						EditorGUI.DrawRect(new Rect(rowRect.x - 2, rowRect.y - 1, rowRect.width + 4, height + 2), DuplicateTint);
+						EditorGUI.DrawRect(new Rect(rowRect.x - 2, rowRect.y - 1, rowRect.width + 4, height + 2), duplicateTint);
 
 					var keyRect = new Rect(rowRect.x, rowRect.y, keyWidth, height);
 					var valueRect = new Rect(rowRect.x + keyWidth + Spacing, rowRect.y, valueWidth, height);
@@ -153,7 +153,7 @@ namespace NMJTools.Drawers
 
 		/// <summary>
 		/// Indices whose key already appeared earlier. Compares the boxed value of whatever the key
-		/// property happens to be, so it works for strings, enums, ints and object references alike
+		/// property happens to be, so it works for strings, enums, ints, and object references alike
 		/// without knowing TKey.
 		/// </summary>
 		private static HashSet<int> FindDuplicates(SerializedProperty keys)
@@ -181,9 +181,9 @@ namespace NMJTools.Drawers
 				SerializedPropertyType.Enum => "e:" + property.enumValueIndex,
 				SerializedPropertyType.Float => "f:" + property.doubleValue,
 				SerializedPropertyType.Boolean => "b:" + property.boolValue,
-				// SerializedPropertyType.ObjectReference => "o:" + (property.objectReferenceValue
-				// 													 ? property.objectReferenceInstanceIDValue.ToString()
-				// 													 : "null"),
+				SerializedPropertyType.ObjectReference => "o:" + (property.objectReferenceValue
+																	 ? property.objectReferenceEntityIdValue.ToString()
+																	 : "null"),
 				_ => "?:" + property.propertyPath
 			};
 		}

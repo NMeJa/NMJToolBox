@@ -4,7 +4,6 @@ using Cysharp.Threading.Tasks;
 using NMJTools.Pooling;
 using NMJTools.Scenes;
 using UnityEngine;
-using UnityEngine.Audio;
 using UnityEngine.SceneManagement;
 
 namespace NMJTools.Integrations
@@ -16,6 +15,7 @@ namespace NMJTools.Integrations
 	/// <c>PackageDetector</c> does automatically while UniTask is in the project. The
 	/// core NMJ ToolBox assembly never references UniTask, so the package still works without it.
 	/// </summary>
+	// ReSharper disable once UnusedType.Global
 	public static class UniTaskPoolExtensions
 	{
 		/// <summary>
@@ -26,8 +26,9 @@ namespace NMJTools.Integrations
 		/// to compare two floats. A UniTask delay is driven by one shared PlayerLoop hook instead, so
 		/// the per-object cost is zero.
 		/// </summary>
+		// ReSharper disable once MemberCanBePrivate.Global
 		public static async UniTask DespawnAfterAsync(this GameObject instance, float seconds,
-													 bool unscaledTime = false, CancellationToken token = default)
+													  bool unscaledTime = false, CancellationToken token = default)
 		{
 			if (!instance) return;
 

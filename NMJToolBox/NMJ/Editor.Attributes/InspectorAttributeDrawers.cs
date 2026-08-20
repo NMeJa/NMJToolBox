@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
@@ -85,7 +84,7 @@ namespace NMJTools.Attributes
 
 	public abstract class ButtonEditorBase : Editor
 	{
-		private static readonly Dictionary<Type, List<(MethodInfo method, ButtonAttribute attribute)>> Cache = new();
+		private static readonly Dictionary<Type, List<(MethodInfo method, ButtonAttribute attribute)>> cache = new();
 
 		public override void OnInspectorGUI()
 		{
@@ -113,7 +112,7 @@ namespace NMJTools.Attributes
 				{
 					if (!GUILayout.Button(label)) continue;
 
-					// Invoke on every selected target so the button works on a multi-selection.
+					// Invoke on every selected target, so the button works on a multi-selection.
 					foreach (var selected in targets)
 					{
 						Undo.RecordObject(selected, label);
@@ -138,7 +137,7 @@ namespace NMJTools.Attributes
 		/// </summary>
 		private static List<(MethodInfo, ButtonAttribute)> GetButtons(Type type)
 		{
-			if (Cache.TryGetValue(type, out var cached)) return cached;
+			if (cache.TryGetValue(type, out var cached)) return cached;
 
 			const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public |
 									   BindingFlags.NonPublic | BindingFlags.FlattenHierarchy;
@@ -160,7 +159,7 @@ namespace NMJTools.Attributes
 				buttons.Add((method, attribute));
 			}
 
-			Cache[type] = buttons;
+			cache[type] = buttons;
 			return buttons;
 		}
 	}

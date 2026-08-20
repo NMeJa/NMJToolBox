@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using NMJTools.Attributes;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -5,6 +6,7 @@ using UnityEngine.SceneManagement;
 
 namespace NMJTools.Scenes
 {
+	[SuppressMessage("ReSharper", "UnusedMember.Global")]
 	public class SceneChanger : MonoBehaviour
 	{
 		// Was backed by a #if UNITY_EDITOR SceneAsset field plus a handwritten custom inspector.

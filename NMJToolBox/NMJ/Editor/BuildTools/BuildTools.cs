@@ -86,7 +86,7 @@ namespace NMJTools.BuildTools
 
 		// ========== Build ==========
 
-		[MenuItem("Tools/NMJ/Build/Build Timestamped %#b", false, 220)]
+		[MenuItem("Tools/NMJ/Build/Build Timestamped %&b", false, 220)]
 		private static void BuildTimestamped()
 		{
 			var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
