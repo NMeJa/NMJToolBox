@@ -1,5 +1,44 @@
 # NMJToolBox version history
 
+## v3.1.0
+
+### Changed — folder scaffolding is now a wizard
+
+  `FolderStructureCreator` was a menu item with a hardcoded `const projectName = "__Game"`, one
+  `Debug.Log` per folder, and no way to vary the structure without editing the package source. It is
+  now `Tools ▸ NMJ ▸ Setup ▸ Create Folder Structure` — a window with templates, live preview and a
+  custom editor, in `Editor/Scaffolding/` (`NMJTools.Scaffolding`).
+
+  - **Empty folders now survive a clone.** Git cannot track an empty directory, and Unity writes a
+    folder's `.meta` beside it — so a commit carried `Art/Textures.meta` but not `Art/Textures/`,
+    and on clone Unity deleted the orphaned meta. The entire scaffold evaporated for everyone but
+    its author. Every folder now gets a `.gitkeep`, which git tracks and Unity ignores.
+  - **Five built-in templates** (Standard, Minimal, Feature-based, 2D Game, Empty), shipped as code
+    so a fresh install needs no assets. Any can be edited and saved as a `FolderTemplate` asset,
+    which is the project-level setting — it lives in the repo and shows up in review, unlike an
+    editor preference, which is per-user and per-machine.
+  - **Preview before running**, marking new folders green and existing ones grey, with a
+    confirmation dialog since folder creation cannot be undone.
+  - **Optional assembly definitions**: `<Root>.Runtime` and `<Root>.Editor`, the editor one
+    referencing the runtime one **by GUID**, read back after import so it cannot be mistyped. By
+    name, one typo produces the "references non-existent assemblies" error, which stops the whole
+    assembly compiling rather than degrading.
+  - **Optional README.md** in the root, documenting the layout.
+  - Target folder defaults to the current Project-window selection instead of always `Assets/`.
+
+### Fixed
+
+  - Folder creation is batched in `StartAssetEditing`/`StopAssetEditing` and reports one summary
+    line, rather than 21 individual creations and 21 log lines (including "already exists" on every
+    re-run).
+  - `AssetDatabase.CreateFolder`'s return value is checked — an empty string means failure, and
+    discarding it is how a silent no-op passes for success.
+  - Ancestor paths are expanded and sorted shallowest-first, so a template can list only its leaves.
+    This replaces the recursive create-parent-first walk, which threw on any path containing no `/`.
+  - Paths are normalised: backslashes, trailing slashes, `.`/`..` segments and invalid filename
+    characters no longer fail silently.
+
+---
 ## v3.0.0
 
 ### Breaking — namespaces

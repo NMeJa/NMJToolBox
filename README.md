@@ -45,6 +45,7 @@ Namespaces mirror folders under each assembly root, per the usual C# convention:
 | `Runtime/Debugging` | `NMJTools.Debugging` | | `Editor/Hierarchy` | `NMJTools.Hierarchy` |
 | `Runtime/Serializables` | `NMJTools.Serializables` | | `Editor/Prefabs` | `NMJTools.Prefabs` |
 | `Runtime/Scenes` | `NMJTools.Scenes` | | `Editor/Setup` | `NMJTools.Setup` |
+| | | | `Editor/Scaffolding` | `NMJTools.Scaffolding` |
 
 > **Folder names are constrained by that convention.** A namespace segment under `NMJTools`
 > shadows any Unity namespace or class of the same name, for *every* namespace nested beneath it —
@@ -66,7 +67,7 @@ Namespaces mirror folders under each assembly root, per the usual C# convention:
 | Menu path | Shortcut | Script |
 | --- | --- | --- |
 | `Tools ▸ NMJ ▸ Reset Transform` | `Ctrl+R` | `GameplayTools` |
-| `Tools ▸ NMJ ▸ Create Custom Folder Structure` | | `FolderStructureCreator` |
+| `Tools ▸ NMJ ▸ Setup ▸ Create Folder Structure` | | `FolderStructureWindow` |
 | `Tools ▸ NMJ ▸ StateMachineGenerator` | | `StateMachineGenerator` |
 | `Tools ▸ NMJ ▸ Batch Rename` | `Ctrl+Shift+R` | `BatchRenameWindow` |
 | `Tools ▸ NMJ ▸ Shortcuts ▸ Batch Rename — Take Over F2` | | `BatchRenameShortcut` |
@@ -568,23 +569,56 @@ config.CreateAsset($"{AssetDatabaseUtilities.AssetPath}__Game/Runtime/Scriptable
 | `GetAllScenes(SerializedProperty)` | Resolves an array property of scene paths into `SceneAsset`s. |
 | `GetScene(SerializedProperty)` | Resolves a single scene-path property into a `SceneAsset`. |
 
-## `FolderStructureCreator`
+## Folder structure wizard
 
-`Tools ▸ NMJ ▸ Create Custom Folder Structure` scaffolds an opinionated layout under `Assets/__Game`:
+`Tools ▸ NMJ ▸ Setup ▸ Create Folder Structure` — pick a layout, edit it, see exactly what will be
+created, then run it.
 
-```
-Assets/__Game/
-├── Editor/
-│   ├── Scripts/
-│   └── EditorResources/
-└── Runtime/
-    ├── Scenes/       Scripts/       Materials/   Textures/
-    ├── Prefabs/      Audio/         Animations/  Fonts/
-    ├── Resources/    ScriptableObjects/
-    └── Scripts/Managers/
-```
+### Templates
 
-Existing folders are skipped (and logged). The root name `__Game` is a `const` in the script.
+Five ship with the package, as code rather than assets so a fresh install has something to offer
+immediately:
+
+| Template | For |
+| --- | --- |
+| **Standard** | Full 3D project — Runtime/Editor split with art, audio, data and UI broken out |
+| **Minimal** | Jams and prototypes: Scripts, Scenes, Prefabs, Art, Audio |
+| **Feature-based** | Grouped by feature rather than asset type; scales better on large projects |
+| **2D Game** | Sprites, atlases, tilemaps, 2D animation |
+| **Empty** | Root only — a starting point for your own |
+
+Any of them can be edited in the window and saved with **Save as Template…**, producing a
+`FolderTemplate` asset that appears in the dropdown under `Project/`. You can also create one
+directly from `Assets ▸ Create ▸ NMJ ▸ Folder Template`.
+
+> A template **asset** is deliberately the project-level setting rather than an editor preference.
+> It lives in the repository, so a team shares one structure and changes to it show up in review;
+> editor settings are per-user and per-machine, which is the wrong scope for a shared convention.
+
+### Options
+
+| Option | Description |
+| --- | --- |
+| **Root folder** | Created under the target path; everything nests inside it. Defaults to `__Game`. |
+| **Create in** | Target parent. Defaults to the selected Project-window folder. |
+| **Write .gitkeep files** | On by default — see below. |
+| **Create assembly definitions** | Generates `<Root>.Runtime` and `<Root>.Editor` asmdefs, the editor one referencing the runtime one **by GUID** (read back after import, so it cannot be mistyped). |
+| **Write README.md** | Documents the layout in the root folder, so the convention travels with the project. |
+
+The preview lists every folder, ancestors included, marking new ones green and existing ones grey.
+Creation is batched inside `StartAssetEditing`/`StopAssetEditing`, reports one summary line instead
+of one log per folder, and checks `AssetDatabase.CreateFolder`'s return value so a failure is not
+silent. Because folder creation is not undoable, it asks for confirmation first.
+
+### Why `.gitkeep` matters
+
+**Git cannot track an empty directory.** Unity writes a folder's `.meta` file *beside* the folder,
+so a commit carries `Art/Textures.meta` but not `Art/Textures/`. On clone, Unity finds an orphaned
+`.meta` with no folder, warns, and deletes it — and the whole scaffold quietly evaporates for
+everyone except the person who generated it.
+
+A `.gitkeep` fixes it: git tracks the file so the directory survives, and Unity ignores dot-files
+entirely, so it never appears in the Project window and never gets a `.meta` of its own.
 
 ## `StateMachineGenerator`
 
