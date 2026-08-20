@@ -2,14 +2,15 @@
     "name": "NMJ.NMJTools.Newtonsoft",
     "rootNamespace": "NMJTools.Integrations",
     "references": [
-        "NMJ.NMJTools.Runtime",
-        "GUID:40b032db8146107469b5d38e37a86f10"
+        "GUID:ab92a53fae28a934b8b952c281899f57"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Newtonsoft.Json.dll"
+    ],
     "autoReferenced": true,
     "defineConstraints": [
         "NMJ_NEWTONSOFT"

@@ -30,6 +30,7 @@ namespace NMJTools.Integrations
 			}
 			catch (Exception exception)
 			{
+				// ReSharper disable once RedundantStringInterpolation
 				throw new Exception($"Error parsing json!\n " +
 									$"Data: {json}\n" +
 									$"Exception: {exception}\n" +
