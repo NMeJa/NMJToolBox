@@ -12,6 +12,13 @@ namespace NMJTools.Setup
 		OpenUpm,
 
 		/// <summary>
+		/// Package on Unity's own registry. Installs by name through <c>Client.Add</c> exactly like
+		/// <see cref="Git"/>, but must not trigger the OpenUPM scoped-registry write — Unity's
+		/// registry is already configured in every project.
+		/// </summary>
+		Registry,
+
+		/// <summary>
 		/// Paid Asset Store package. Cannot be purchased or downloaded programmatically. If the user
 		/// already owns it and Unity has cached the .unitypackage, it can be imported; otherwise all
 		/// we can do is open the store page.
@@ -82,6 +89,19 @@ namespace NMJTools.Setup
 		private static readonly List<PackageEntry> entries = new()
 		{
 			// ---------- Free / open source ----------
+			new PackageEntry
+			{
+				packageId = "com.unity.nuget.newtonsoft-json",
+				displayName = "Newtonsoft Json",
+				source = InstallSource.Registry,
+				identifier = "com.unity.nuget.newtonsoft-json",
+				url = "https://docs.unity3d.com/Packages/com.unity.nuget.newtonsoft-json@latest",
+				define = "NMJ_NEWTONSOFT",
+				// The Unity package ships the assembly as Newtonsoft.Json, not Newtonsoft.
+				assemblies = new[] { "Newtonsoft.Json" },
+				notes = "Enables JsonExtensions.ParseJson<T>. Without it that one helper is simply absent; " +
+						"nothing else in the package needs it."
+			},
 			new PackageEntry
 			{
 				packageId = "com.cysharp.unitask",

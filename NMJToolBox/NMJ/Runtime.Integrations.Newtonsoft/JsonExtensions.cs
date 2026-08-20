@@ -5,14 +5,13 @@ using Newtonsoft.Json;
 namespace NMJTools.Integrations
 {
 	/// <summary>
-	/// JSON helpers, kept in their own file deliberately.
+	/// JSON helpers. The only code in NMJ ToolBox that touches Newtonsoft, which is why it lives in
+	/// its own <c>defineConstraints</c>-gated assembly rather than in <c>Runtime/Extensions</c>.
 	///
-	/// This is the only code in NMJ ToolBox that touches Newtonsoft and therefore the only reason
-	/// <c>com.unity.nuget.newtonsoft-json</c> is a package dependency at all. Isolated like this, it
-	/// can be lifted into a <c>defineConstraints</c>-gated assembly — the same pattern the UniTask
-	/// and LitMotion integrations already use — which would leave the package with no hard
-	/// dependencies whatsoever. Folded into StringExtensions, that move would mean pulling the
-	/// string helpers apart again.
+	/// That gating is what lets NMJ ToolBox declare **no package dependencies at all**: without
+	/// <c>com.unity.nuget.newtonsoft-json</c> installed, <c>NMJ_NEWTONSOFT</c> is never set, this
+	/// assembly is skipped, and <see cref="ParseJson{T}"/> is simply absent — nothing else in the
+	/// package notices. Install it from Tools ▸ NMJ ▸ Setup ▸ Project Setup to switch it on.
 	/// </summary>
 	[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 	[SuppressMessage("ReSharper", "UnusedMember.Global")]

@@ -9,7 +9,7 @@ https://github.com/NMeJa/NMJToolBox.git
 ```
 
 * **Unity:** 2021.2 or newer (uses C# 9 syntax: target-typed `new()`, range operators, switch expressions)
-* **Dependencies:** `com.unity.nuget.newtonsoft-json` 3.2.1 (used only by `JsonExtensions.ParseJson<T>`)
+* **Dependencies:** none. `JsonExtensions.ParseJson<T>` needs `com.unity.nuget.newtonsoft-json`, but it lives in an opt-in assembly — see [Optional package integrations](#optional-package-integrations)
 * **License:** MIT
 
 > The **PlayerPrefs Manager** that used to live in this package now ships separately —
@@ -27,6 +27,7 @@ https://github.com/NMeJa/NMJToolBox.git
 | Inspector attributes *(opt-in)* | `NMJ.NMJTools.Attributes` (+ `.Editor`) | `NMJToolBox/NMJ/Runtime.Attributes/`, `Editor.Attributes/` |
 | UniTask integration *(opt-in)* | `NMJ.NMJTools.UniTask` | `NMJToolBox/NMJ/Runtime.Integrations.UniTask/` |
 | LitMotion integration *(opt-in)* | `NMJ.NMJTools.LitMotion` | `NMJToolBox/NMJ/Runtime.Integrations.LitMotion/` |
+| Newtonsoft integration *(opt-in)* | `NMJ.NMJTools.Newtonsoft` | `NMJToolBox/NMJ/Runtime.Integrations.Newtonsoft/` |
 
 The *opt-in* assemblies are gated by `defineConstraints` and compile only when the matching package
 is present — see [Optional package integrations](#optional-package-integrations).
@@ -139,16 +140,19 @@ All methods return `string.Empty` for `null`/empty input.
 > `TrimStart`/`TrimEnd` are *string* overloads of BCL names that normally take `char[]`. The
 > compiler picks the extension only because no instance overload accepts a `string`.
 
-## `JsonExtensions`
+## `JsonExtensions` *(opt-in)*
 
 | Method | Description |
 | --- | --- |
 | `ParseJson<T>(this string json)` | `JsonConvert.DeserializeObject<T>`, rethrowing with the offending JSON in the message. |
 
-Kept in its own file deliberately: this is the only code in the package that touches Newtonsoft, and
-therefore the only reason `com.unity.nuget.newtonsoft-json` is a dependency at all. Isolated, it can
-later move into a `defineConstraints`-gated assembly — the same pattern the UniTask and LitMotion
-integrations use — leaving the package with no hard dependencies.
+Lives in its own `defineConstraints`-gated assembly (`NMJ.NMJTools.Newtonsoft`, define
+`NMJ_NEWTONSOFT`) — the same pattern as the UniTask and LitMotion integrations.
+
+That is what lets **NMJ ToolBox declare no package dependencies at all**. Without
+`com.unity.nuget.newtonsoft-json` installed the define is never set, the assembly is skipped, and
+`ParseJson<T>` is simply absent; nothing else in the package notices. Install it from
+`Tools ▸ NMJ ▸ Setup ▸ Project Setup` to switch it on.
 
 ## `UIToolkitExtensions`
 
@@ -157,12 +161,12 @@ integrations use — leaving the package with no hard dependencies.
 | `DisplayVisibility(this IStyle, DisplayStyle)` | Sets `style.display`. |
 | `ChangeBackgroundColor(this IStyle, Color)` | Sets `style.backgroundColor`. |
 
-## `Singleton<T>`
+## `SingletonBase<T>`
 
 `[DefaultExecutionOrder(-10)]` abstract `MonoBehaviour` singleton base.
 
 ```csharp
-public class AudioManager : Singleton<AudioManager>
+public class AudioManager : SingletonBase<AudioManager>
 {
     protected override void PersonalAwake() { /* your Awake code */ }
 }
@@ -343,6 +347,7 @@ the matching define symbols are automatic — see [Project setup](#project-setup
 | **UniTask** | `NMJ_UNITASK` | `UniTaskReturnToPool`, `GameObject.DespawnAfterAsync()`, `SpawnForAsync()`, awaitable `SceneChanger.LoadAsync()` / `LoadAdditiveAsync()` / `UnloadAsync()` |
 | **LitMotion** | `NMJ_LITMOTION` | `MotionReturnToPool` (tweened spawn/despawn for pooled objects), `PoolMotionExtensions.SpawnWithPop()` |
 | **Odin Inspector** | `ODIN_INSPECTOR` | Switches NMJ's own `[ReadOnly]` / `[Required]` / `[Button]` **off**, so the two cannot collide |
+| **Newtonsoft Json** | `NMJ_NEWTONSOFT` | `JsonExtensions.ParseJson<T>()` |
 | **Asset Usage Detector** | `NMJ_ASSETUSAGEDETECTOR` | `Assets ▸ NMJ ▸ Find Usages` |
 
 Each integration lives in its own assembly gated by `defineConstraints`. The core assemblies never
@@ -752,17 +757,24 @@ Everything else here (pooling, batch rename, collections) is general-purpose and
 
 | Assembly | Platforms | References |
 | --- | --- | --- |
-| `NMJ.NMJTools.Runtime` | All | Newtonsoft.Json |
+| `NMJ.NMJTools.Runtime` | All | — |
 | `NMJ.NMJTools.Editor` | Editor | `NMJ.NMJTools.Runtime` |
 | `NMJ.NMJTools.SceneTools.Editor` | Editor | — |
 | `NMJ.NMJTools.Attributes` | All | — · gated by `NMJ_ATTRIBUTES` |
 | `NMJ.NMJTools.Attributes.Editor` | Editor | `NMJ.NMJTools.Attributes` · gated by `NMJ_ATTRIBUTES` |
 | `NMJ.NMJTools.UniTask` | All | `NMJ.NMJTools.Runtime`, UniTask · gated by `NMJ_UNITASK` |
-| `NMJ.NMJTools.LitMotion` | All | `NMJ.NMJTools.Runtime`, LitMotion · gated by `NMJ_LITMOTION` |
+| `NMJ.NMJTools.LitMotion` | All | `NMJ.NMJTools.Runtime`, LitMotion, LitMotion.Extensions · gated by `NMJ_LITMOTION` |
+| `NMJ.NMJTools.Newtonsoft` | All | `NMJ.NMJTools.Runtime`, Newtonsoft.Json · gated by `NMJ_NEWTONSOFT` |
 
-The two core assemblies have no third-party references, so the package compiles in a clean project.
-Every optional integration lives in its own assembly behind `defineConstraints`, so an uninstalled
-package means that assembly is skipped rather than the build breaking.
+**No core assembly has a third-party reference**, so the package compiles in a completely clean
+project and `package.json` declares no dependencies. Every optional integration lives in its own
+assembly behind `defineConstraints`, so an uninstalled package means that assembly is skipped rather
+than the build breaking.
+
+> Third-party assemblies are referenced **by GUID, not by name**, wherever the GUID is known. A
+> by-name reference that does not resolve takes the whole assembly down with the "references
+> non-existent assemblies" error — the failure that used to affect the entire editor assembly via
+> Ultimate Editor Enhancer.
 
 ## Related packages
 

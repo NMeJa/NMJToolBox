@@ -3,7 +3,7 @@
     "rootNamespace": "NMJTools.Integrations",
     "references": [
         "NMJ.NMJTools.Runtime",
-        "Newtonsoft"
+        "GUID:40b032db8146107469b5d38e37a86f10"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

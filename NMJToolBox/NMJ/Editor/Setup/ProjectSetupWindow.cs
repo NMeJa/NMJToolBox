@@ -40,7 +40,7 @@ namespace NMJTools.Setup
 
 			scroll = EditorGUILayout.BeginScrollView(scroll);
 
-			DrawSection("Free / open source", InstallSource.Git, InstallSource.OpenUpm);
+			DrawSection("Free / open source", InstallSource.Git, InstallSource.OpenUpm, InstallSource.Registry);
 			DrawSection("Paid — Asset Store", InstallSource.AssetStore);
 
 			EditorGUILayout.EndScrollView();
@@ -148,6 +148,7 @@ namespace NMJTools.Setup
 				switch (entry.source)
 				{
 					case InstallSource.Git:
+					case InstallSource.Registry:
 					case InstallSource.OpenUpm:
 						if (GUILayout.Button("Install", GUILayout.Width(90))) Enqueue(new[] { entry });
 						break;
