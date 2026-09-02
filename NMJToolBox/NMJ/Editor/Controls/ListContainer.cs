@@ -1,167 +1,167 @@
-﻿using System;
-using System.Collections;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using UnityEditor;
-using UnityEditor.UIElements;
-using UnityEngine;
-using UnityEngine.UIElements;
+﻿// using System;
+// using System.Collections;
+// using System.Diagnostics.CodeAnalysis;
+// using System.IO;
+// using System.Linq;
+// using System.Threading.Tasks;
+// using UnityEditor;
+// using UnityEditor.UIElements;
+// using UnityEngine;
+// using UnityEngine.UIElements;
 
-// ReSharper disable once CheckNamespace
-namespace NMJTools.Controls
-{
-	[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-	public class ListContainer : VisualElement
-	{
-		private readonly VisualElement root;
+// // ReSharper disable once CheckNamespace
+// namespace NMJTools.Controls
+// {
+// 	[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+// 	public class ListContainer : VisualElement
+// 	{
+// 		private readonly VisualElement root;
 
-		private IList itemsSource;
+// 		private IList itemsSource;
 
-		public Func<VisualElement> makeItem;
-		public Action<VisualElement, int> itemAdded;
-		public Action<int> destroyItem;
-		public Action<int> itemRemoved;
+// 		public Func<VisualElement> makeItem;
+// 		public Action<VisualElement, int> itemAdded;
+// 		public Action<int> destroyItem;
+// 		public Action<int> itemRemoved;
 
-		private readonly IntegerField amountIntegerField;
-		private readonly ScrollView scroll;
+// 		private readonly IntegerField amountIntegerField;
+// 		private readonly ScrollView scroll;
 
-		public IList ItemsSource
-		{
-			get => itemsSource;
-			set
-			{
-				var val = value;
-				if (itemsSource is null)
-				{
-					Func<Task<bool>> cont = async () =>
-						{
-							await Task.Delay(25);
-							for (var index = 0; index < val.Count; index++)
-								CreateNewItem(index, false);
-							return true;
-						};
-					cont.Invoke();
-				}
+// 		public IList ItemsSource
+// 		{
+// 			get => itemsSource;
+// 			set
+// 			{
+// 				var val = value;
+// 				if (itemsSource is null)
+// 				{
+// 					Func<Task<bool>> cont = async () =>
+// 						{
+// 							await Task.Delay(25);
+// 							for (var index = 0; index < val.Count; index++)
+// 								CreateNewItem(index, false);
+// 							return true;
+// 						};
+// 					cont.Invoke();
+// 				}
 
-				itemsSource = val;
-			}
-		}
+// 				itemsSource = val;
+// 			}
+// 		}
 
-		public ListContainer(string title = "List", bool useFoldout = true, bool showScroller = true) : this()
-		{
-			var titleLabel = root.Q<Label>("Title");
-			titleLabel.text = title;
+// 		public ListContainer(string title = "List", bool useFoldout = true, bool showScroller = true) : this()
+// 		{
+// 			var titleLabel = root.Q<Label>("Title");
+// 			titleLabel.text = title;
 
-			var foldout = root.Q<Foldout>("ShowHide");
-			foldout.Q<Toggle>().style.display = useFoldout ? DisplayStyle.Flex : DisplayStyle.None;
-			foldout.text = useFoldout ? title : "";
+// 			var foldout = root.Q<Foldout>("ShowHide");
+// 			foldout.Q<Toggle>().style.display = useFoldout ? DisplayStyle.Flex : DisplayStyle.None;
+// 			foldout.text = useFoldout ? title : "";
 
-			scroll.verticalScrollerVisibility = showScroller ? ScrollerVisibility.Auto : ScrollerVisibility.Hidden;
-		}
+// 			scroll.verticalScrollerVisibility = showScroller ? ScrollerVisibility.Auto : ScrollerVisibility.Hidden;
+// 		}
 
-		public ListContainer()
-		{
-			root = this;
+// 		public ListContainer()
+// 		{
+// 			root = this;
 
-			void CreateVisual()
-			{
-				string GetCurrentFileName([System.Runtime.CompilerServices.CallerFilePath] string fileName = null) =>
-					fileName;
+// 			void CreateVisual()
+// 			{
+// 				string GetCurrentFileName([System.Runtime.CompilerServices.CallerFilePath] string fileName = null) =>
+// 					fileName;
 
-				var filePath = GetCurrentFileName();
-				var directoryPath = Path.GetDirectoryName(filePath);
-				var currentDirectory = Directory.GetCurrentDirectory();
-				var relativePath = directoryPath?.Replace($"{currentDirectory}\\", string.Empty);
+// 				var filePath = GetCurrentFileName();
+// 				var directoryPath = Path.GetDirectoryName(filePath);
+// 				var currentDirectory = Directory.GetCurrentDirectory();
+// 				var relativePath = directoryPath?.Replace($"{currentDirectory}\\", string.Empty);
 
-				AssetDatabase.LoadAssetAtPath<VisualTreeAsset>
-					($"{relativePath}/{nameof(ListContainer)}.uxml").CloneTree(root);
-				root.styleSheets.Add(AssetDatabase.LoadAssetAtPath<StyleSheet>
-										 ($"{relativePath}/{nameof(ListContainer)}.uss"));
-			}
+// 				AssetDatabase.LoadAssetAtPath<VisualTreeAsset>
+// 					($"{relativePath}/{nameof(ListContainer)}.uxml").CloneTree(root);
+// 				root.styleSheets.Add(AssetDatabase.LoadAssetAtPath<StyleSheet>
+// 										 ($"{relativePath}/{nameof(ListContainer)}.uss"));
+// 			}
 
-			CreateVisual();
+// 			CreateVisual();
 
-			amountIntegerField = root.Q<IntegerField>("Amount");
-			scroll = root.Q<ScrollView>("Scroll");
-			var removeBtn = root.Q<ToolbarButton>("Remove");
-			var addBtn = root.Q<ToolbarButton>("Add");
+// 			amountIntegerField = root.Q<IntegerField>("Amount");
+// 			scroll = root.Q<ScrollView>("Scroll");
+// 			var removeBtn = root.Q<ToolbarButton>("Remove");
+// 			var addBtn = root.Q<ToolbarButton>("Add");
 
-			amountIntegerField.RegisterValueChangedCallback(evt =>
-				{
-					var val = evt.newValue;
-					var itemCount = ItemsSource.Count;
-					if (val < 0 || val == itemCount)
-					{
-						amountIntegerField.SetValueWithoutNotify(itemCount);
-						return;
-					}
+// 			amountIntegerField.RegisterValueChangedCallback(evt =>
+// 				{
+// 					var val = evt.newValue;
+// 					var itemCount = ItemsSource.Count;
+// 					if (val < 0 || val == itemCount)
+// 					{
+// 						amountIntegerField.SetValueWithoutNotify(itemCount);
+// 						return;
+// 					}
 
-					var result = val - itemCount;
-					if (result > 0)
-					{
-						for (var index = itemCount; index < val; index++)
-							CreateNewItem(index);
-					}
-					else
-					{
-						result = Mathf.Abs(result);
-						for (var index = result; index > 0; index--)
-							DeleteItem();
-					}
-				});
+// 					var result = val - itemCount;
+// 					if (result > 0)
+// 					{
+// 						for (var index = itemCount; index < val; index++)
+// 							CreateNewItem(index);
+// 					}
+// 					else
+// 					{
+// 						result = Mathf.Abs(result);
+// 						for (var index = result; index > 0; index--)
+// 							DeleteItem();
+// 					}
+// 				});
 
-			removeBtn.clicked += DeleteItem;
-			addBtn.clicked += () => CreateNewItem(ItemsSource.Count);
-		}
+// 			removeBtn.clicked += DeleteItem;
+// 			addBtn.clicked += () => CreateNewItem(ItemsSource.Count);
+// 		}
 
-		private void DeleteItem()
-		{
-			if (ItemsSource.Count == 0) return;
-			void DestroyItem(int i) => scroll.contentContainer.hierarchy.Children().Last().RemoveFromHierarchy();
+// 		private void DeleteItem()
+// 		{
+// 			if (ItemsSource.Count == 0) return;
+// 			void DestroyItem(int i) => scroll.contentContainer.hierarchy.Children().Last().RemoveFromHierarchy();
 
-			void RemoveItem(int i) => ItemsSource.RemoveAt(i);
+// 			void RemoveItem(int i) => ItemsSource.RemoveAt(i);
 
-			var countIndex = ItemsSource.Count - 1;
-			destroyItem += DestroyItem;
-			itemRemoved += RemoveItem;
-			destroyItem?.Invoke(countIndex);
-			itemRemoved?.Invoke(countIndex);
-			destroyItem -= DestroyItem;
-			itemRemoved -= RemoveItem;
-			amountIntegerField.SetValueWithoutNotify(ItemsSource.Count);
-		}
+// 			var countIndex = ItemsSource.Count - 1;
+// 			destroyItem += DestroyItem;
+// 			itemRemoved += RemoveItem;
+// 			destroyItem?.Invoke(countIndex);
+// 			itemRemoved?.Invoke(countIndex);
+// 			destroyItem -= DestroyItem;
+// 			itemRemoved -= RemoveItem;
+// 			amountIntegerField.SetValueWithoutNotify(ItemsSource.Count);
+// 		}
 
-		private void CreateNewItem(int index, bool shouldAddElement = true)
-		{
-			object GetDefaultValue(Type type)
-			{
-				if (!type.IsValueType || Nullable.GetUnderlyingType(type) != null) return null;
-				return Activator.CreateInstance(type);
-			}
+// 		private void CreateNewItem(int index, bool shouldAddElement = true)
+// 		{
+// 			object GetDefaultValue(Type type)
+// 			{
+// 				if (!type.IsValueType || Nullable.GetUnderlyingType(type) != null) return null;
+// 				return Activator.CreateInstance(type);
+// 			}
 
-			if (shouldAddElement)
-			{
-				if (ItemsSource.Count > 0)
-				{
-					var lastItem = ItemsSource[^1];
-					ItemsSource.Add(lastItem);
-				}
-				else
-				{
-					var itemType = ItemsSource.GetType().GetGenericArguments()[0];
-					ItemsSource.Add(GetDefaultValue(itemType));
-				}
-			}
+// 			if (shouldAddElement)
+// 			{
+// 				if (ItemsSource.Count > 0)
+// 				{
+// 					var lastItem = ItemsSource[^1];
+// 					ItemsSource.Add(lastItem);
+// 				}
+// 				else
+// 				{
+// 					var itemType = ItemsSource.GetType().GetGenericArguments()[0];
+// 					ItemsSource.Add(GetDefaultValue(itemType));
+// 				}
+// 			}
 
-			var visual = makeItem?.Invoke();
-			scroll?.Add(visual);
-			itemAdded?.Invoke(visual, index);
-			amountIntegerField.SetValueWithoutNotify(ItemsSource.Count);
-		}
+// 			var visual = makeItem?.Invoke();
+// 			scroll?.Add(visual);
+// 			itemAdded?.Invoke(visual, index);
+// 			amountIntegerField.SetValueWithoutNotify(ItemsSource.Count);
+// 		}
 
 
-		public new class UxmlFactory : UxmlFactory<ListContainer> { }
-	}
-}
+// 		public new class UxmlFactory : UxmlFactory<ListContainer> { }
+// 	}
+// }
