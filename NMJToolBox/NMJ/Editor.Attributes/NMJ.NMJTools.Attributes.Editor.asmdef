@@ -2,7 +2,7 @@
     "name": "NMJ.NMJTools.Attributes.Editor",
     "rootNamespace": "NMJTools.Attributes",
     "references": [
-        "NMJ.NMJTools.Attributes"
+        "GUID:b9c8981ead97a5241b6d54ddcfc37b85"
     ],
     "includePlatforms": [
         "Editor"

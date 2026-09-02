@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using NMJTools.Pooling;
@@ -92,11 +93,25 @@ namespace NMJTools.Integrations
 		[Tooltip("Ignore Time.timeScale, so effects still expire while paused or in slow motion.")]
 		[SerializeField] private bool unscaledTime;
 
+		// this changed: added for parity with ReturnToPool. Without it the UniTask version - the one
+		// the docs tell you to prefer - was missing the option that makes one-shot effects work,
+		// so anyone using a variable-length particle burst had to fall back to the Update-driven
+		// component and pay the per-frame cost this class exists to avoid.
+		[Tooltip("Also wait for every ParticleSystem on this instance to finish. Use with delay 0 " +
+				 "for one-shot effects of varying length.")]
+		[SerializeField] private bool whenParticlesFinished;
+
 		private CancellationTokenSource cts;
+		private ParticleSystem[] particles;
+
+		private void Awake()
+		{
+			if (whenParticlesFinished) particles = GetComponentsInChildren<ParticleSystem>(true);
+		}
 
 		private void OnEnable()
 		{
-			if (delay <= 0f) return;
+			if (delay <= 0f && !whenParticlesFinished) return;
 
 			cts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
 			WaitThenReturn(cts.Token).Forget();
@@ -115,7 +130,16 @@ namespace NMJTools.Integrations
 		{
 			try
 			{
-				await UniTask.Delay(TimeSpan.FromSeconds(delay), unscaledTime, PlayerLoopTiming.Update, token);
+				if (delay > 0f)
+					await UniTask.Delay(TimeSpan.FromSeconds(delay), unscaledTime, PlayerLoopTiming.Update, token);
+
+				if (whenParticlesFinished && particles is { Length: > 0 })
+				{
+					// Yield rather than DelayFrame: one shared PlayerLoop hook, no allocation per wait,
+					// and the check is two comparisons.
+					while (particles.Any(p => p && p.IsAlive(true)))
+						await UniTask.Yield(PlayerLoopTiming.Update, token);
+				}
 			}
 			catch (OperationCanceledException)
 			{

@@ -1,5 +1,149 @@
 # NMJToolBox version history
 
+## v4.0.0
+
+### Breaking
+
+  - **`SerializableDictionary<TKey, TValue>` and its drawer are removed.** Unity 6.6 serializes
+    `Dictionary<,>` natively, so the wrapper is redundant there — drop the type name and keep the
+    `[SerializeField]`. Note the built-in support is *opt-in* (a public dictionary is not serialized
+    automatically, unlike other public fields), does not work with `[SerializeReference]`, and
+    cannot nest a dictionary inside another collection. On 2022.3–6.5 there is no built-in
+    equivalent: stay on v3.1.0 or vendor the old file.
+  - **`ListContainer` is removed**, along with its `.uxml` and `.uss`. The entire class had been
+    commented out, so it compiled to nothing while still shipping two assets and a namespace.
+  - **`StandardMaterialCreator` is removed**, replaced by `MaterialSetupProfile` +
+    `MaterialFromTextures` — see *Added*.
+  - **`OpenWithVSCode` is removed**, replaced by `OpenInExternalEditor` — see *Added*.
+  - **`InstantiateInGrid` moved from the Editor assembly to the Runtime assembly**, and its fields
+    were renamed (`column`/`row` → `columns`/`rows`, `xSize`/`zSize` → `spacing`,
+    `startXPos`/`startZPos` → `origin`). Its `.meta` was kept, so existing scene references survive
+    the move, but serialized field values do not.
+  - **`State.Update` and `State.FixedUpdate` are now virtual** rather than abstract. Overrides keep
+    working; states that implemented them only to satisfy the compiler can delete them.
+  - **Minimum Unity is now 2022.3.** The manifest claimed 2021.2, which was never accurate — see
+    *Fixed*.
+
+### Changed — Project Setup is now one button
+
+  `Tools ▸ NMJ ▸ Setup ▸ Project Setup` installed one package per `Client.Add` call, which is one
+  resolve and one domain reload each, and imported paid packages through Unity's interactive import
+  dialog. A dozen packages meant a dozen reloads and a dozen dialogs to click through.
+
+  - **One transaction.** Everything selected — installs *and* removals — goes through a single
+    `Client.AddAndRemove`: one resolve, one domain reload, and a dependency graph solved once with
+    the whole set visible to it.
+  - **Silent Asset Store imports.** Cached `.unitypackage` files are imported with
+    `interactive: false`, chained on the import callbacks so they run back to back. The queue lives
+    in `SessionState` and survives the domain reload the transaction causes; a guard flag stops the
+    reload and the deferred call from both draining it.
+  - **Per-item toggles, stored in a `SetupProfile` asset** with Standard / Mobile / Prototype /
+    Everything / Empty presets. A project asset rather than an editor preference, for the same
+    reason `FolderTemplate` is one: the packages a project depends on are a property of the project,
+    not of the machine building it. The window works against an in-memory profile until you save.
+  - **Removals are first-class.** The three packages the old `.bat` stripped by hand — Visual Studio
+    Editor, VS Code Editor, Visual Scripting — are toggles alongside the installs, with the reason
+    stated, and go into the same transaction.
+  - **The full package set from the install script is now the catalogue**, grouped into Core,
+    Debugging, Authoring, Optional, Mobile and Paid, plus PlayerPrefs Manager and suggested extras
+    (R3, ZString, SerializeReference Extensions, NuGetForUnity, Memory Profiler, Compilation
+    Visualizer, Input System, Code Coverage, Localization, Mobile Notifications, Adaptive
+    Performance) — all off by default. **ProGrids was dropped**: it never left preview and was
+    discontinued; ProBuilder 5 has its own grid and snapping.
+
+### Fixed — the OpenUPM registry write
+
+  Adding the scoped registry was a hand-spliced JSON string that bailed out with a console message
+  whenever `manifest.json` already contained *any* `scopedRegistries` block — the common case on any
+  project that has ever installed one OpenUPM package.
+
+  Unity ships no writable manifest API and no scoped-registry API (`Client` has Add, Remove and
+  Resolve, and nothing that touches `scopedRegistries`), and `JsonUtility` cannot round-trip a
+  manifest without dropping every key it was not told about — `lock`, `testables`, anything a future
+  Unity adds. So `MiniJson.cs` is a small order-preserving JSON reader/writer for exactly this job.
+  `PackageManifest` now unions scopes into an existing OpenUPM entry, leaves other registries
+  untouched, and writes through a temporary file so a half-written manifest can never land.
+
+### Fixed
+
+  - **`SingletonBase` destroyed a duplicate and then carried on.** `Destroy` is deferred to the end
+    of the frame, so nothing stopped the duplicate reaching `DontDestroyOnLoad` and `PersonalAwake`
+    — a second instance ran its whole initialisation, and could mark itself `DontDestroyOnLoad`, on
+    the frame it was being destroyed.
+  - **`StateMachine` never called `Update` or `FixedUpdate`.** `State` declared both abstract, so
+    every state was forced to implement two methods the machine had no way to invoke. Added `Tick`
+    and `FixedTick`, plus `Current`, `IsIn<T>()`, `Restart()` and a `StateChanged` event. `Change`
+    now ignores a self-transition, which previously replayed `Exit`/`Enter` for a state that had not
+    changed.
+  - **`StateMachineGenerator` emitted code that did not compile.** With *Group by phase* on it
+    opened three `#region` directives and closed none; *Use Foldout on Events* emitted
+    `[Foldout(...)]` from NaughtyAttributes, which the package stopped bundling — the `using` had
+    been removed but the attribute usage left behind. Output also always landed in the root of
+    `Assets/` with no namespace. It now takes a namespace and a folder, both remembered.
+  - **`Ctrl+R` on Reset Transform collided with Unity's `Assets ▸ Refresh`.** Unity resolves a
+    shortcut collision by silently disabling *both* entries, so the binding cost the refresh
+    shortcut and did not work itself. Now an unbound `[Shortcut]`, like the batch-rename and
+    selection-history commands. It also marks the scene dirty, which it never did.
+  - **`InstantiateInGrid` was a `MonoBehaviour` in an editor-only assembly** and so could not exist
+    in a build. Edit-mode building now uses `PrefabUtility.InstantiatePrefab` and one Undo step,
+    rather than plain `Instantiate` producing prefab-disconnected, non-undoable clones.
+  - **`SerializedProperty.objectReferenceEntityIdValue` is Unity 6 only** and was used against a
+    declared 2021.2 minimum. Also, `DeleteArrayElementAtIndex` nulls an object-reference element on
+    the first call and only removes it on the second, so removing a reference-typed row appeared to
+    do nothing. *(Both in the drawer since removed, but the same bug is worth recording.)*
+  - **`CollectionExtensions.Shuffle` constructed `new Random()` per call.** Mono seeds a
+    parameterless `Random` from the system clock, so two shuffles in the same frame came out in
+    lockstep. Now one shared generator and a Fisher-Yates swap, replacing repeated `List.RemoveAt`
+    — which was O(n²) for no gain.
+  - **`CollectionExtensions.Loop`** carried a meaningless `where T : IConvertible` constraint that
+    excluded every reference type, and wrapped only one step: index 7 into a 3-element array
+    returned element 0 rather than element 1, and a negative index threw.
+  - **`AssetDatabaseExtensions.CreateAsset`** used `folderPath[..7]`, throwing
+    `ArgumentOutOfRangeException` on any path shorter than `"Assets/"` instead of the intended
+    message.
+  - **`CreateCollection` created the group in the wrong scene.** `new GameObject` always lands in
+    the *active* scene, so with two scenes open and the selection in the other one, a collection
+    with no shared parent dragged its children across.
+  - **Android App Bundle builds were named `.apk`.** They still build, then fail at upload — the
+    slowest possible place to find out.
+  - **`manifest.json` was re-read and re-parsed on every repaint** of the setup window. Now cached
+    against the file's write time, so an external edit is still picked up.
+  - **`package.json` declared `"unity": "2021.2"`**, which never compiled: the Scene view overlays
+    use `ListView.selectionChanged` (2022.x, replacing `onSelectionChange`) and
+    `FindAnyObjectByType` (2021.3.18+).
+  - `NMJ.NMJTools.Attributes.Editor` referenced its runtime assembly **by name** while every other
+    asmdef in the package used a GUID. By name, one rename produces the "references non-existent
+    assemblies" error, which stops the whole assembly compiling rather than degrading.
+  - Two `<see cref>` targets in `MathExtensions` pointed at `ParsingExtensions`, a type that no
+    longer exists.
+
+### Added
+
+  - **`MaterialSetupProfile` + `MaterialFromTextures`** — `Assets ▸ NMJ ▸ Create Material From
+    Textures` builds a material per selected folder from texture filename suffixes, and corrects
+    each map's import type and colour space. Shader, material prefix, albedo pattern, the
+    suffix → shader-property table and per-map import kinds all come from a profile asset, pre-filled
+    with the URP Lit conventions.
+
+    This replaces `StandardMaterialCreator`, which was one project's code copied into the shared
+    package: a `StockAndSorcery` namespace, a hardcoded `Elinis/TCP2` shader, a `Ramp_WarmCosy`
+    asset and an `Assets ▸ Elinis` menu item. Installed anywhere else it added a menu entry that
+    could only ever fail with "shader not found".
+  - **`OpenInExternalEditor`** — `Assets ▸ NMJ ▸ Open in External Editor` uses
+    `CodeEditor.CurrentEditor`, so the file opens in the editor configured in
+    `Preferences ▸ External Tools` rather than a hardcoded one, and non-code assets fall back to the
+    OS default application. Plus `Assets ▸ NMJ ▸ Reveal in Explorer`, which selects the file itself
+    rather than its folder.
+  - **`Tools ▸ NMJ ▸ Setup ▸ Open manifest.json`**.
+  - `UniTaskReturnToPool` gained the `whenParticlesFinished` option that `ReturnToPool` already had.
+    Without it the UniTask version — the one the docs tell you to prefer — was missing the option
+    that makes one-shot effects work, so a variable-length particle burst forced you back onto the
+    `Update`-driven component this class exists to avoid.
+  - `InstantiateInGrid` gained a `centred` option, `Vector3` origin (Y now works), gizmo preview of
+    the cell positions, and a **Clear** button that removes only the children it created.
+
+---
+
 ## v3.1.0
 
 ### Changed — folder scaffolding is now a wizard

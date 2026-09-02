@@ -17,10 +17,15 @@ namespace NMJTools.Extensions
 		// ReSharper disable once UnusedMember.Global
 		public static void CreateAsset(this ScriptableObject instance, string folderPath, string objectName)
 		{
-			if (folderPath[..AssetDatabaseUtilities.AssetPath.Length] != AssetDatabaseUtilities.AssetPath)
+			// this changed: was folderPath[..AssetPath.Length], which throws ArgumentOutOfRangeException
+			// on any path shorter than "Assets/" - so passing "" or "Foo" gave an index error instead
+			// of the intended message. StartsWith is also the correct comparison for a prefix test.
+			if (string.IsNullOrWhiteSpace(folderPath) ||
+				!folderPath.StartsWith(AssetDatabaseUtilities.AssetPath, StringComparison.Ordinal))
 			{
-				throw new Exception($"Path doesn't start with '{AssetDatabaseUtilities.AssetPath}' string." +
-									"\nPlease Correct the problem!");
+				throw new ArgumentException(
+											$"Path must start with '{AssetDatabaseUtilities.AssetPath}'. Received: '{folderPath}'.",
+											nameof(folderPath));
 			}
 
 			var directoryPath = folderPath.TrimEnd('/', '\\', ' ');

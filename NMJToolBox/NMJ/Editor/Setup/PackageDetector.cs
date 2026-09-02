@@ -15,7 +15,9 @@ namespace NMJTools.Setup
 	/// Detection reads loaded assemblies rather than asmdef <c>versionDefines</c> because it has to
 	/// cover both cases uniformly: UPM packages, which have a package name and version, and Asset
 	/// Store content dropped into <c>Assets/</c>, which is not a package at all and has nothing for
-	/// <c>versionDefines</c> to bind to.
+	/// <c>versionDefines</c> to bind to. The manifest's dependency list is consulted as well, so a
+	/// package that is installed but has not finished compiling still reads as present — otherwise
+	/// the setup window offers to install it a second time in the window between the two.
 	/// </summary>
 	[InitializeOnLoad]
 	public static class PackageDetector
@@ -33,7 +35,7 @@ namespace NMJTools.Setup
 		[DidReloadScripts]
 		private static void OnScriptsReloaded() => EditorApplication.delayCall += () => Sync(false);
 
-		/// <summary>Whether defines are updated automatically after every recompiling.</summary>
+		/// <summary>Whether defines are updated automatically after every recompile.</summary>
 		public static bool AutoManage
 		{
 			get => EditorPrefs.GetBool(AutoManageKey, true);
@@ -52,20 +54,24 @@ namespace NMJTools.Setup
 			set => EditorPrefs.SetBool(ForceAttributesKey, value);
 		}
 
-		/// <summary>True when the package's assemblies or marker types are loaded.</summary>
+		/// <summary>True when the package's assemblies, marker types, or manifest entry are found.</summary>
 		public static bool IsPresent(PackageEntry entry)
 		{
 			if (entry == null) return false;
 
-			var loaded = LoadedAssemblyNames();
+			if (entry.assemblies.Any(LoadedAssemblyNames().Contains)) return true;
 
-			if (entry.assemblies.Any(loaded.Contains)) return true;
+			if (entry.types.Length > 0 && entry.types.Any(typeName => FindType(typeName) != null)) return true;
 
-			return entry.types.Length > 0 &&
-				   entry.types.Any(typeName => FindType(typeName) != null);
+			// Manifest fallback, for the gap between "resolved" and "compiled". Only meaningful for
+			// UPM entries — an Asset Store drop never appears in the manifest.
+			return entry.IsUpm &&
+				   !string.IsNullOrEmpty(entry.packageId) &&
+				   ManifestDependencies().Contains(entry.packageId);
 		}
 
 		private static HashSet<string> cachedAssemblyNames;
+		private static HashSet<string> cachedDependencies;
 
 		private static HashSet<string> LoadedAssemblyNames()
 		{
@@ -75,6 +81,16 @@ namespace NMJTools.Setup
 															   AppDomain.CurrentDomain.GetAssemblies()
 																		.Select(a => a.GetName().Name),
 															   StringComparer.Ordinal);
+		}
+
+		private static HashSet<string> ManifestDependencies() =>
+			cachedDependencies ??= PackageManifest.ReadDependencies();
+
+		/// <summary>Drops the per-reload caches. Call after anything that changes the manifest.</summary>
+		public static void InvalidateCaches()
+		{
+			cachedAssemblyNames = null;
+			cachedDependencies = null;
 		}
 
 		private static Type FindType(string fullName)
@@ -98,14 +114,14 @@ namespace NMJTools.Setup
 		}
 
 		/// <summary>
-		/// Recomputes every managed definition and writes them back if anything changed.
+		/// Recomputes every managed define and writes them back if anything changed.
 		/// </summary>
 		/// <param name="verbose">Log what changed. Off for the automatic pass, on when run by hand.</param>
 		public static void Sync(bool verbose)
 		{
 			if (!AutoManage && !verbose) return;
 
-			cachedAssemblyNames = null;
+			InvalidateCaches();
 
 			var namedTarget = CurrentNamedBuildTarget();
 			var defines = PlayerSettings.GetScriptingDefineSymbols(namedTarget)
@@ -123,14 +139,19 @@ namespace NMJTools.Setup
 				if (string.IsNullOrEmpty(entry.define)) continue;
 
 				managed.Add(entry.define);
-				if (IsPresent(entry)) wanted.Add(entry.define);
+
+				// Deliberately assembly-only here, not IsPresent: a define drives conditional
+				// compilation, so it must not be set while the package's assemblies are still
+				// resolving. The manifest fallback answers "should the window offer to install this",
+				// which is a different question from "will this code compile".
+				if (HasCompiledAssemblies(entry)) wanted.Add(entry.define);
 			}
 
-			// NMJ's own attributes are the one definition driven by an *absence*: they exist to fill the
+			// NMJ's own attributes are the one define driven by an *absence*: they exist to fill the
 			// gap Odin would otherwise fill, so they switch off the moment Odin appears.
 			managed.Add(PackageCatalog.NmjAttributesDefine);
 			var odinPresent = before.Contains(PackageCatalog.OdinDefine) ||
-							  PackageCatalog.All.Any(e => e.displayName == "Odin Inspector" && IsPresent(e));
+							  PackageCatalog.All.Any(e => e.displayName == "Odin Inspector" && HasCompiledAssemblies(e));
 
 			if (!odinPresent || ForceAttributesWithOdin)
 				wanted.Add(PackageCatalog.NmjAttributesDefine);
@@ -148,7 +169,7 @@ namespace NMJTools.Setup
 			var added = after.Except(before).ToList();
 			var removed = before.Except(after).ToList();
 
-			// Writing definitions triggers a recompiling, which re-enters this method. Only ever writing on
+			// Writing defines triggers a recompile, which re-enters this method. Only ever writing on
 			// an actual change is what stops that from looping forever.
 			PlayerSettings.SetScriptingDefineSymbols(namedTarget, after.OrderBy(d => d).ToArray());
 
@@ -158,7 +179,15 @@ namespace NMJTools.Setup
 			Debug.Log($"[NMJ] Package defines updated: {string.Join("  ", summary)}");
 		}
 
-		// ReSharper disable once MemberCanBePrivate.Global
+		/// <summary>Assembly/type detection only — the manifest does not count. See <see cref="Sync"/>.</summary>
+		private static bool HasCompiledAssemblies(PackageEntry entry)
+		{
+			if (entry == null) return false;
+			if (entry.assemblies.Any(LoadedAssemblyNames().Contains)) return true;
+
+			return entry.types.Length > 0 && entry.types.Any(typeName => FindType(typeName) != null);
+		}
+
 		internal static NamedBuildTarget CurrentNamedBuildTarget() =>
 			NamedBuildTarget.FromBuildTargetGroup(EditorUserBuildSettings.selectedBuildTargetGroup);
 

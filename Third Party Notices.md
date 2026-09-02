@@ -14,6 +14,6 @@ License Type: "MIT"
 
 [Newtonsoft.Json License](https://github.com/JamesNK/Newtonsoft.Json/blob/master/LICENSE.md)
 
-Used only by `ParsingExtensions.ParseJson<T>`.
+Used only by `JsonExtensions.ParseJson<T>`, in the opt-in `NMJ.NMJTools.Newtonsoft` assembly.
 
 --------------------------------------------------------------------------------------------------

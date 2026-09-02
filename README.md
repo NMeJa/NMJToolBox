@@ -8,7 +8,10 @@ Install via **Package Manager → Add package from git URL…**
 https://github.com/NMeJa/NMJToolBox.git
 ```
 
-* **Unity:** 2021.2 or newer (uses C# 9 syntax: target-typed `new()`, range operators, switch expressions)
+* **Unity:** 2022.3 LTS or newer (uses C# 9 syntax: target-typed `new()`, range operators, switch
+  expressions). The manifest said 2021.2 until v4.0.0, which was never accurate — the Scene view
+  overlays use `ListView.selectionChanged` (2022.x; it replaced `onSelectionChange`) and
+  `FindAnyObjectByType` (2021.3.18+).
 * **Dependencies:** none. `JsonExtensions.ParseJson<T>` needs `com.unity.nuget.newtonsoft-json`, but it lives in an opt-in assembly — see [Optional package integrations](#optional-package-integrations)
 * **License:** MIT
 
@@ -40,12 +43,13 @@ Namespaces mirror folders under each assembly root, per the usual C# convention:
 | --- | --- | --- | --- | --- |
 | `Runtime/Extensions` | `NMJTools.Extensions` | | `Editor/BatchRename` | `NMJTools.BatchRename` |
 | `Runtime/Pooling` | `NMJTools.Pooling` | | `Editor/BuildTools` | `NMJTools.BuildTools` |
-| `Runtime/Patterns` | `NMJTools.Patterns` | | `Editor/Controls` | `NMJTools.Controls` |
-| `Runtime/Attributes` | `NMJTools.Attributes` | | `Editor/Drawers` | `NMJTools.Drawers` |
-| `Runtime/Debugging` | `NMJTools.Debugging` | | `Editor/Hierarchy` | `NMJTools.Hierarchy` |
-| `Runtime/Serializables` | `NMJTools.Serializables` | | `Editor/Prefabs` | `NMJTools.Prefabs` |
+| `Runtime/Patterns` | `NMJTools.Patterns` | | `Editor/Drawers` | `NMJTools.Drawers` |
+| `Runtime/Attributes` | `NMJTools.Attributes` | | `Editor/Hierarchy` | `NMJTools.Hierarchy` |
+| `Runtime/Debugging` | `NMJTools.Debugging` | | `Editor/Prefabs` | `NMJTools.Prefabs` |
 | `Runtime/Scenes` | `NMJTools.Scenes` | | `Editor/Setup` | `NMJTools.Setup` |
-| | | | `Editor/Scaffolding` | `NMJTools.Scaffolding` |
+| `Runtime/Tools` | `NMJTools.Tools` | | `Editor/Scaffolding` | `NMJTools.Scaffolding` |
+| | | | `Editor/MaterialCreation` | `NMJTools.MaterialCreation` |
+| | | | `Editor/Tools` | `NMJTools.Tools` |
 
 > **Folder names are constrained by that convention.** A namespace segment under `NMJTools`
 > shadows any Unity namespace or class of the same name, for *every* namespace nested beneath it —
@@ -66,9 +70,9 @@ Namespaces mirror folders under each assembly root, per the usual C# convention:
 
 | Menu path | Shortcut | Script |
 | --- | --- | --- |
-| `Tools ▸ NMJ ▸ Reset Transform` | `Ctrl+R` | `GameplayTools` |
+| `Tools ▸ NMJ ▸ Reset Transform` | *(unbound)* | `GameplayTools` |
 | `Tools ▸ NMJ ▸ Setup ▸ Create Folder Structure` | | `FolderStructureWindow` |
-| `Tools ▸ NMJ ▸ StateMachineGenerator` | | `StateMachineGenerator` |
+| `Tools ▸ NMJ ▸ State Machine Generator` | | `StateMachineGenerator` |
 | `Tools ▸ NMJ ▸ Batch Rename` | `Ctrl+Shift+R` | `BatchRenameWindow` |
 | `Tools ▸ NMJ ▸ Shortcuts ▸ Batch Rename — Take Over F2` | | `BatchRenameShortcut` |
 | `Assets ▸ NMJ ▸ Batch Rename` | | `BatchRenameWindow` |
@@ -81,7 +85,11 @@ Namespaces mirror folders under each assembly root, per the usual C# convention:
 | `Tools ▸ NMJ ▸ Find Missing Scripts In Open Scenes` | | `PrefabTools` |
 | `Tools ▸ NMJ ▸ Setup ▸ Project Setup` | | `ProjectSetupWindow` |
 | `Tools ▸ NMJ ▸ Setup ▸ Re-scan Packages` | | `PackageDetector` |
-| `Tools ▸ NMJ ▸ Build ▸ Build Timestamped` | `Ctrl+Shift+B` | `BuildTools` |
+| `Tools ▸ NMJ ▸ Setup ▸ Open manifest.json` | | `PackageManifest` |
+| `Assets ▸ NMJ ▸ Create Material From Textures` | | `MaterialFromTextures` |
+| `Assets ▸ NMJ ▸ Open in External Editor` | | `OpenInExternalEditor` |
+| `Assets ▸ NMJ ▸ Reveal in Explorer` | | `OpenInExternalEditor` |
+| `Tools ▸ NMJ ▸ Build ▸ Build Timestamped` | `Ctrl+Alt+B` | `BuildTools` |
 | `Tools ▸ NMJ ▸ Build ▸ Increment … Version` | | `BuildTools` |
 | `Tools ▸ NMJ ▸ Open ▸ …` | | `BuildTools` |
 | Component ⋮ ▸ `Rename GameObject To This Component` | | `GameObjectName` |
@@ -188,18 +196,31 @@ A minimal, allocation-free state machine.
 [Serializable]
 public class IdleState : State
 {
-    public override void Enter()       { }
-    public override void Exit()        { }
-    public override void Update()      { }
-    public override void FixedUpdate() { }
+    public override void Enter() { }
+    public override void Exit()  { }
+
+    // Update and FixedUpdate are virtual — override only the one you need.
+    public override void Update() { }
 }
 
 var fsm = new StateMachine(new IdleState());   // calls Enter() immediately
 fsm.Change(new RunState());                    // Exit() old → Enter() new
+
+private void Update()      => fsm.Tick();
+private void FixedUpdate() => fsm.FixedTick();
 ```
 
-`State` exposes a `protected MonoBehaviour user` field for the owning behaviour.
-`StateMachine` only drives `Enter`/`Exit` — pump `Update`/`FixedUpdate` yourself if you need them.
+`State` exposes a `MonoBehaviour User` property (and a `protected user` field) for the owning
+behaviour, plus a constructor taking one.
+
+`StateMachine` also has `Current`, `IsIn<T>()`, `Restart()` and a `StateChanged` event.
+`Change` ignores a transition to the state already running — an accidental self-transition would
+otherwise fire `Exit` then `Enter` for a state that never changed, resetting whatever they set up.
+Use `Restart()` when a genuine re-entry is what you want.
+
+> **Changed in v4.0.0.** `Update` and `FixedUpdate` were abstract on `State` but nothing ever
+> called them, so every state was obliged to implement two methods that could not run. They are now
+> virtual, and `Tick`/`FixedTick` drive them.
 
 ## Extensions
 
@@ -224,19 +245,27 @@ var t = health.Remap(0f, maxHealth, 0f, 1f);
 var rb = gameObject.GetOrAddComponent<Rigidbody>();
 ```
 
-## `SerializableDictionary<TKey, TValue>`
+## `SerializableDictionary<TKey, TValue>` — removed in v4.0.0
 
-A real `Dictionary` Unity can serialize. Unity's serializer has never supported `Dictionary<,>` —
-marking one `[SerializeField]` does nothing, silently, and the field resets on every domain reload.
+Unity 6.6 serializes `Dictionary<,>` natively, so the wrapper and its drawer are gone. Migration is
+dropping the type name:
 
 ```csharp
-[SerializeField] private SerializableDictionary<string, int> scores = new();
+[SerializeField] private Dictionary<string, int> scores = new();
 ```
 
-Unity 2020.1+ serializes generic fields directly, so no subclass is needed. The custom drawer shows
-paired key/value rows with add/remove, and tints duplicate keys red — mid-edit the backing lists
-legitimately hold duplicates that a dictionary cannot, so those rows stay visible and fixable rather
-than silently discarded. Only the first occurrence of a duplicate key survives into the dictionary.
+Three differences worth knowing:
+
+* **It is opt-in.** `[SerializeField]` is required on every dictionary field — a *public* dictionary
+  is not serialized automatically, unlike other public fields.
+* **`[SerializeReference]` is not supported** on dictionary fields. If you relied on polymorphic
+  values, `com.mackysoft.serializereference-extensions` covers that case and is listed in the
+  Optional category of [Project setup](#project-setup).
+* **No multi-object editing**, and a dictionary cannot nest directly inside another collection —
+  `List<Dictionary<string, int>>` is invalid. Duplicate and null keys behave as the old drawer did:
+  flagged in the inspector, first occurrence wins at runtime.
+
+On Unity 2022.3–6.5 there is no built-in equivalent; stay on v3.1.0 or vendor the old file.
 
 ## `[SceneReference]`
 
@@ -494,15 +523,57 @@ where they were.
 `Tools ▸ NMJ ▸ Setup ▸ Project Setup` — brings a fresh project up to a standard package set, and
 keeps the integration define symbols in sync.
 
-**What it can do:** free and OpenUPM packages install with one button. OpenUPM needs a scoped
-registry, which the window writes into `Packages/manifest.json` first (merging scopes; it refuses
-and prints instructions rather than clobbering an existing `scopedRegistries` block).
+**One button, no prompts.** Everything selected is applied as a *single* `Client.AddAndRemove`
+transaction — one resolve, one domain reload, and a dependency graph solved once with the whole set
+visible to it, rather than one `Client.Add` and one reload per package. Cached Asset Store packages
+are then imported back to back with `interactive: false`, chained on the import callbacks, so the
+"Import Unity Package" dialog never appears. The queue lives in `SessionState` and survives the
+domain reload the transaction causes.
+
+**Per-item toggles, saved in the project.** The selection is a `SetupProfile` asset
+(`Assets ▸ Create ▸ NMJ ▸ Setup Profile`) with presets — Standard, Mobile, Prototype, Everything,
+Empty. It is a project asset rather than an editor preference for the same reason `FolderTemplate`
+is: the set of packages a project depends on is a property of the project, not of the machine
+building it. Committed, a clone reproduces the environment in one click. The window works with no
+asset at all, against an in-memory profile, until you press **Save Profile…**.
+
+**Removals are first-class.** Unity's default template ships the Visual Studio integration, the
+VS Code integration and Visual Scripting; each costs compile and domain-reload time and none is
+wanted in a Rider project. They are listed as toggles alongside the installs and go into the same
+transaction.
+
+**OpenUPM registry.** OpenUPM packages need a scoped registry in `Packages/manifest.json` before
+`Client` can resolve the name, and Unity exposes no API for it — `Client` has Add, Remove and
+Resolve, and nothing that touches `scopedRegistries`. The window parses the manifest properly and
+merges: it unions scopes into an existing OpenUPM entry, leaves other registries alone, and writes
+through a temp file so a half-written manifest can never land. (Until v4.0.0 it spliced a JSON
+string in and gave up whenever *any* `scopedRegistries` block already existed — the common case.)
 
 **What it cannot do — and why:** paid Asset Store packages cannot be installed by script. Unity
 checks entitlement server-side against the signed-in account, so no API can make a package you don't
 own appear. What *is* possible: if you already downloaded one on this machine, Unity keeps the
-`.unitypackage` in a shared per-user cache, and the window imports it straight from there. Failing
-that it opens the store page. **This is the honest ceiling on "one-button install".**
+`.unitypackage` in a shared per-user cache, and the window imports it straight from there —
+silently, as part of the same run. Only a package never downloaded on this machine needs a trip to
+the store page. **This is the honest ceiling on "one-button install".**
+
+### Catalogue
+
+`PackageCatalog` is a plain data table — adding a package is one entry, not a code change. Entries
+are grouped so a preset can switch a whole category:
+
+| Category | Contents |
+| --- | --- |
+| **Core** | Newtonsoft Json, UniTask, PlayerPrefs Manager, Rider Editor, Test Framework, Editor Coroutines, Burst, Collections, Input System |
+| **Debugging** | In-Game Debug Console, Runtime Inspector, Asset Usage Detector, Graphy, Profile Analyzer, Memory Profiler, Compilation Visualizer |
+| **Authoring** | Cinemachine, Timeline, Recorder, ProBuilder, Addressables, LitMotion, BroAudio |
+| **Optional** | R3, ZString, SerializeReference Extensions, NuGetForUnity, Code Coverage, Localization |
+| **Mobile** | Mobile Notifications, Adaptive Performance |
+| **Paid** | Odin Inspector, Init(args), vHierarchy/vInspector/vFolders/vTabs/vRuler, Editor Console Pro, Hot Reload |
+
+Two notes on what is *not* there. **ProGrids** was dropped: it never left preview and was
+discontinued — ProBuilder 5 has its own grid and snapping. **Input System** and **Addressables**
+are off by default; the first forces an editor restart when the input backend switches, and the
+second changes how the whole project loads content. Both are decisions, not defaults.
 
 ### Define symbols
 
@@ -622,20 +693,25 @@ entirely, so it never appears in the Project window and never gets a `.meta` of 
 
 ## `StateMachineGenerator`
 
-`Tools ▸ NMJ ▸ StateMachineGenerator` — a code generator window that writes
-`Assets/<Prefix>StateMachine.cs`.
+`Tools ▸ NMJ ▸ State Machine Generator` — a code generator window that writes
+`<chosen folder>/<Prefix>StateMachine.cs`.
+
+This is deliberately still the enum-and-switch shape rather than the class-per-state
+[`StateMachine`](#state--statemachine): they solve different problems, and a switch is the better
+fit when the states are a fixed, small, closed set.
 
 **Naming**
-* **Prefix name** — spaces become `_`, first letter is capitalised.
-* **Number of states** — `+`/`-` buttons or a delayed int field. Each state name is upper-cased and
-  `-`/space become `_`. One state is flagged **Default**.
+* **Prefix** — reduced to a valid PascalCase type-name fragment.
+* **Namespace** — optional; empty generates into the global namespace. Remembered between runs.
+* **Folder** — browse, or take the current Project-window selection. Remembered between runs.
+* **States** — `+`/`-` buttons. Each name is upper-cased with non-alphanumerics turned into `_`.
+  One state is flagged **Default** with a radio, and duplicates are reported before you can generate.
 
 **Code styling parameters**
 
 | Option | Effect |
 | --- | --- |
-| Use UnityEvents | Emits `public UnityEvent On<State>Enter/Exit` and invokes them. |
-| Use Foldout on Events | Emits `[Foldout("<State>")]` above each UnityEvent (requires an attribute package that provides `Foldout`). |
+| Generate UnityEvents | Emits `public UnityEvent on<State>Enter/Exit` and invokes them. |
 | Use regions / Space regions | Wraps sections in `#region`, optionally with blank lines between them. |
 | Group by state / Group by phase | Methods ordered per state (`OnEnterIdle`, `OnUpdateIdle`, `OnExitIdle`, …) or per phase (all `OnEnter*`, then all `OnUpdate*`, then all `OnExit*`). |
 
@@ -648,15 +724,14 @@ public class FooStateMachine : MonoBehaviour
 {
     public FooState CurrentState { get; private set; }
 
-    private void Start()  => TransitionToState(CurrentState, FooState.IDLE);
+    private void Start()  => OnStateEnter(CurrentState);
     private void Update() => OnStateUpdate(CurrentState);
 
     private void OnStateEnter(FooState state)  { /* switch → OnEnterIdle() … */ }
     private void OnStateUpdate(FooState state) { /* switch → OnUpdateIdle() … */ }
     private void OnStateExit(FooState state)   { /* switch → OnExitIdle() … */ }
 
-    private void TransitionToState(FooState from, FooState to);
-    private void TransitionToState(FooState to);
+    public void TransitionToState(FooState toState);   // ignores a self-transition
 
     private void OnEnterIdle()  { }
     private void OnUpdateIdle() { }
@@ -664,53 +739,90 @@ public class FooStateMachine : MonoBehaviour
 }
 ```
 
-The **Generate** button is hidden when the target file already exists — it never overwrites.
+**Generate** is disabled when the target file already exists — it never overwrites.
+
+> **Fixed in v4.0.0.** With *Group by phase* on, the generator opened three `#region` directives and
+> closed none, so the generated file did not compile. *Use Foldout on Events* emitted
+> `[Foldout(...)]` from NaughtyAttributes, which this package stopped bundling — that option is
+> gone. Output also always landed in the root of `Assets/` with no namespace.
 
 ## `GameplayTools`
 
-`Tools ▸ NMJ ▸ Reset Transform` (`Ctrl+R`) resets every selected transform:
-`localPosition = zero`, `localRotation = identity`, `localScale = one`. For a `RectTransform` it also
-sets pivot/anchorMin/anchorMax to `(0.5, 0.5)` and `sizeDelta` to `(100, 100)`. Registers an Undo per object.
+`Tools ▸ NMJ ▸ Reset Transform` resets every selected transform: `localPosition = zero`,
+`localRotation = identity`, `localScale = one`. For a `RectTransform` it also sets
+pivot/anchorMin/anchorMax to `(0.5, 0.5)` and `sizeDelta` to `(100, 100)`. The whole selection is one
+Undo step.
+
+> **Changed in v4.0.0.** This used to be bound to `Ctrl+R`, which is Unity's own *Assets ▸ Refresh*.
+> Unity resolves a shortcut collision by silently disabling **both** entries, so the binding cost the
+> refresh shortcut and did not work itself. It is now registered through the shortcut system with no
+> default binding — assign one in `Edit ▸ Shortcuts` (search "NMJ"), as with the batch-rename and
+> selection-history commands.
 
 ## `InstantiateInGrid`
 
-`[ExecuteAlways] MonoBehaviour` with an **Instantiate In Grid** context-menu command.
+A `MonoBehaviour` that lays copies of a prefab out on a grid, built from a **Build Grid** button in
+its inspector.
 
 | Field | Description |
 | --- | --- |
-| `column` / `row` | Grid dimensions (X and Z). |
-| `parent` | Parent for the clones. |
 | `objectToInstantiate` | Prefab or scene object to clone. |
-| `xSize` / `zSize` | Spacing on each axis. |
-| `startXPos` / `startZPos` | Local origin of the grid. |
+| `parent` | Parent for the copies. Falls back to this transform. |
+| `columns` / `rows` | Grid dimensions (X and Z). |
+| `spacing` | Spacing on each axis, as a `Vector2`. |
+| `origin` | Local-space offset of the first cell — a full `Vector3`, so Y works. |
+| `centred` | Centre the grid on the origin instead of growing towards +X/+Z. |
 
-Clones are named `<original> <x> <z>` and positioned in local space.
+Copies are named `<prefab> [column,row]`. **Clear** removes only children carrying that suffix, so
+anything you parented there by hand is left alone. Cell positions are drawn as gizmos when selected.
 
-## `ListContainer` (`CustomListView`)
+> **Fixed in v4.0.0.** This lived in `Editor/Tools/`, inside an assembly whose only platform is
+> Editor. A `MonoBehaviour` in an editor-only assembly cannot exist in a build — Unity strips the
+> assembly, and every scene or prefab referencing it loads with a missing script. It moved to the
+> runtime assembly, keeping its `.meta` so existing scene references survive. The old
+> `[ContextMenu]` also used plain `Instantiate`, producing prefab-disconnected clones that could not
+> be undone; edit-mode building now goes through `PrefabUtility.InstantiatePrefab` and registers a
+> single Undo step for the whole grid.
 
-A UI Toolkit `VisualElement` that wraps any `IList` in a titled, foldable, add/remove list —
-intended for Editor windows and custom inspectors. Backed by `ListContainer.uxml` + `ListContainer.uss`.
+## Material from textures
 
-```csharp
-var list = new ListContainer("Waves", useFoldout: true, showScroller: true)
-{
-    ItemsSource = myWaveList,
-    makeItem    = () => new WaveRow(),
-    itemAdded   = (element, index) => ((WaveRow)element).Bind(myWaveList, index),
-    itemRemoved = index => Debug.Log($"removed {index}")
-};
-root.Add(list);
-```
+`Assets ▸ NMJ ▸ Create Material From Textures` — right-click one or more texture folders. Creates
+(or updates) one material per folder, wiring up the textures found there by filename suffix and
+correcting each one's import settings.
 
-| Member | Description |
-| --- | --- |
-| `IList ItemsSource` | Backing collection. Assigning it for the first time populates the view. |
-| `Func<VisualElement> makeItem` | Creates one row's visual. |
-| `Action<VisualElement,int> itemAdded` | Called after a row is created — bind here. |
-| `Action<int> itemRemoved` / `Action<int> destroyItem` | Called when a row is removed. |
+Everything it needs to know comes from a `MaterialSetupProfile` asset
+(`Assets ▸ Create ▸ NMJ ▸ Material Setup Profile`), pre-filled with the URP Lit conventions: the
+shader name, the material prefix, the albedo filename pattern, and a table of map slots. Each slot
+carries its filename suffixes (current convention first, so a folder holding two generators' output
+resolves predictably), the shader property it feeds, and how it must be imported.
 
-The header carries the title and a delayed `IntegerField` that resizes the list; the footer has
-`+` / `-` toolbar buttons. `UxmlFactory` is exposed, so it can also be used from UXML.
+Two details that matter more than they look:
+
+* **The albedo is the map with *no* suffix**, so any suffix the table does not know falls through
+  and can be mistaken for it. That is why roughness, cavity, ORM and friends are listed with an
+  empty shader property — recognised, import flags corrected, but assigned nowhere.
+* **Import settings are silent when wrong.** A normal map not flagged as one lights incorrectly, and
+  any mask left on sRGB has a gamma curve applied to what is data, not colour.
+
+Re-running updates textures but never the tuning values — the `defaults` list is written only when
+a material is first created, so nothing stamps over what you tuned in the inspector.
+
+> **New in v4.0.0.** This replaces `StandardMaterialCreator`, which was not a reusable tool: it was
+> one project's code copied into the package, with a hardcoded `StockAndSorcery` namespace, an
+> `Elinis/TCP2` shader, a `Ramp_WarmCosy` asset and an `Assets ▸ Elinis` menu item. Installed
+> anywhere else it added a menu entry that could only ever fail with "shader not found".
+
+## `OpenInExternalEditor`
+
+`Assets ▸ NMJ ▸ Open in External Editor` opens the selection in whatever editor the project is
+configured to use, via `CodeEditor.CurrentEditor` — so Rider opens the solution it already has
+loaded rather than a detached file. Anything no script editor will take (a `.png`, an `.fbx`) falls
+back to the OS default application. `Assets ▸ NMJ ▸ Reveal in Explorer` selects the file itself
+rather than its folder.
+
+> **New in v4.0.0.** Replaces `OpenWithVSCode`, which hardcoded `code` as the executable, ignored
+> the editor set in `Preferences ▸ External Tools`, sat in the global namespace inside a package,
+> and silently did nothing where VS Code was not on `PATH`.
 
 ---
 

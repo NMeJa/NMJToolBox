@@ -1,324 +1,508 @@
+using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using UnityEditor;
 using UnityEngine;
 
 namespace NMJTools.Helpers
 {
-	[SuppressMessage("ReSharper", "RedundantStringInterpolation")]
+	/// <summary>
+	/// Generates an enum-and-switch state machine as a C# file.
+	/// </summary>
+	/// <remarks>
+	/// this changed, in four ways that each made the old output fail to compile or fail to be useful:
+	/// <list type="bullet">
+	/// <item>With "group by phase" on it emitted three <c>#region</c> directives and no
+	/// <c>#endregion</c>, so the generated file did not compile at all.</item>
+	/// <item>It still wrote <c>[Foldout("…")]</c> attributes, which came from NaughtyAttributes — a
+	/// package this toolbox stopped bundling. The <c>using</c> was removed at some point but the
+	/// attribute usage was left behind, so the "use foldouts" option produced an unresolved type.</item>
+	/// <item>Output always went to the root of <c>Assets/</c> with no namespace, which is the one
+	/// place a generated script should never land.</item>
+	/// <item>It generated <c>_currentState</c> and four-space indents, against this project's own
+	/// conventions.</item>
+	/// </list>
+	/// The generated machine is deliberately still the enum-and-switch shape rather than the
+	/// class-per-state <see cref="NMJTools.Patterns.StateMachine"/>: they solve different problems, and
+	/// a switch is the better fit when the states are a fixed, small, closed set.
+	/// </remarks>
 	public class StateMachineGenerator : EditorWindow
 	{
-		private string prefixName = "";
+		private const string LastFolderKey = "NMJ.StateMachineGenerator.Folder";
+		private const string LastNamespaceKey = "NMJ.StateMachineGenerator.Namespace";
+
+		private string prefixName = string.Empty;
+		private string targetNamespace = string.Empty;
+		private string targetFolder = "Assets";
+
 		private readonly List<string> states = new();
-		private int defaultState = 0;
-		private bool useUnityEvents = false;
-		private bool useFoldoutsOnEvents = false;
-		private bool useRegions = false;
-		private bool spaceRegions = false;
-		private bool groupByPhase = false;
-		private bool codeStyleOpen = false;
+		private int defaultState;
 
-		private static GUIStyle errorStyle;
-		private static GUIStyle boldStyle;
-		private static TextInfo info;
+		private bool useUnityEvents;
+		private bool useRegions;
+		private bool spaceRegions;
+		private bool groupByPhase;
+		private bool codeStyleOpen;
 
-		[MenuItem("Tools/NMJ/StateMachineGenerator")]
+		private Vector2 scroll;
+
+		[MenuItem("Tools/NMJ/State Machine Generator", false, 60)]
 		public static void ShowWindow()
 		{
-			var window = GetWindow(typeof(StateMachineGenerator));
-			window.minSize = new Vector2(550, 300);
-			window.titleContent = new GUIContent("StateMachine Generator");
+			var window = GetWindow<StateMachineGenerator>(true, "State Machine Generator");
+			window.minSize = new Vector2(560, 420);
+			window.Show();
 		}
 
-		public void OnGUI()
+		private void OnEnable()
 		{
-			errorStyle = new GUIStyle(EditorStyles.label);
-			boldStyle = new GUIStyle(EditorStyles.label);
-			errorStyle.normal.textColor = Color.red;
-			boldStyle.fontStyle = FontStyle.Bold;
-			info = new CultureInfo("en-US", false).TextInfo;
-			EditorGUILayout.Space(5);
-			EditorGUILayout.LabelField("    Naming parameters", boldStyle);
-			EditorGUILayout.Space(5);
-			prefixName = EditorGUILayout.TextField("Prefix name", prefixName.Trim()).Replace(" ", "_");
+			targetFolder = EditorPrefs.GetString(LastFolderKey, "Assets");
+			targetNamespace = EditorPrefs.GetString(LastNamespaceKey, string.Empty);
 
-			if (prefixName.Length > 0) prefixName = prefixName[0].ToString().ToUpper() + prefixName.Substring(1);
-
-			EditorGUILayout.Space(5);
-			if (prefixName.Length <= 0) return;
-
-			EditorGUILayout.BeginHorizontal();
-			var newCount = Mathf.Max(0, EditorGUILayout.DelayedIntField("Number of states", states.Count));
-			if (GUILayout.Button("-"))
-			{
-				newCount--;
-			}
-
-			if (GUILayout.Button("+"))
-			{
-				newCount++;
-			}
-
-			EditorGUILayout.EndHorizontal();
-			while (newCount < states.Count)
-				states.RemoveAt(states.Count - 1);
-			while (newCount > states.Count)
-				states.Add("    STATE_NAME_" + states.Count);
-			for (var i = 0; i < states.Count; i++)
-			{
-				EditorGUILayout.BeginHorizontal();
-				states[i] = EditorGUILayout.TextField("  State " + i, states[i]).Trim().ToUpper().Replace(" ", "_").Replace("-", "_");
-				var isDefault = EditorGUILayout.ToggleLeft(defaultState == i ? "Default" : "", defaultState == i);
-				if (isDefault)
-				{
-					defaultState = i;
-				}
-
-				EditorGUILayout.EndHorizontal();
-			}
-
-			if (defaultState >= states.Count) defaultState = 0;
-
-			if (newCount > 0)
-			{
-				EditorGUILayout.Space(5);
-				codeStyleOpen = EditorGUILayout.Foldout(codeStyleOpen, "Code styling parameters");
-				if (codeStyleOpen)
-				{
-					EditorGUILayout.Space(5);
-					useUnityEvents = EditorGUILayout.ToggleLeft("Use UnityEvents", useUnityEvents);
-					useFoldoutsOnEvents = EditorGUILayout.ToggleLeft("Use Foldout on Events", useFoldoutsOnEvents);
-					EditorGUILayout.BeginHorizontal();
-					useRegions = EditorGUILayout.Toggle("Use regions", useRegions);
-					spaceRegions = useRegions && EditorGUILayout.Toggle("Space regions", spaceRegions);
-
-					EditorGUILayout.EndHorizontal();
-					EditorGUILayout.Space(5);
-					groupByPhase =
-						!EditorGUILayout
-							.ToggleLeft(new GUIContent("Group by state", "Methods will be grouped by state"),
-										!groupByPhase);
-					groupByPhase =
-						EditorGUILayout
-							.ToggleLeft(new GUIContent("Group by phase", "Methods will be grouped by phase (enter/update/exit)"),
-										groupByPhase);
-				}
-
-				if (!FileExists())
-				{
-					EditorGUILayout.Space(5);
-					if (GUILayout.Button("Generate"))
-					{
-						Generate();
-					}
-				}
-			}
-
-			if (prefixName.Length <= 0) return;
-
-			EditorGUILayout.Space(10);
-			EditorGUILayout.LabelField("The file " + prefixName + "StateMachine.cs will be generated");
-			EditorGUILayout.Space(10);
-			if (!FileExists()) return;
-
-			EditorGUILayout.HelpBox("This file already exists!", MessageType.Error);
-			EditorGUILayout.Space(10);
+			if (!AssetDatabase.IsValidFolder(targetFolder)) targetFolder = "Assets";
 		}
 
-		private bool FileExists()
+		// ===================================================================================
+		// UI
+		// ===================================================================================
+
+		private void OnGUI()
 		{
-			var copyPath = Application.dataPath + "/" + prefixName + "StateMachine.cs";
-			return (File.Exists(copyPath));
+			scroll = EditorGUILayout.BeginScrollView(scroll);
+
+			DrawNaming();
+
+			if (!string.IsNullOrEmpty(TypeName))
+			{
+				DrawStates();
+				DrawOptions();
+			}
+
+			EditorGUILayout.EndScrollView();
+
+			DrawFooter();
 		}
 
-		private void Generate()
+		private void DrawNaming()
 		{
-			if (!(prefixName.Length > 0 || states.Count > 0))
+			EditorGUILayout.Space(6);
+			EditorGUILayout.LabelField("Naming", EditorStyles.boldLabel);
+
+			prefixName = EditorGUILayout.TextField(
+												   new GUIContent("Prefix", "Door → DoorState, DoorStateMachine"),
+												   prefixName);
+
+			EditorGUI.BeginChangeCheck();
+			targetNamespace = EditorGUILayout.TextField(
+														new GUIContent("Namespace", "Leave empty to generate into the global namespace."),
+														targetNamespace);
+			if (EditorGUI.EndChangeCheck()) EditorPrefs.SetString(LastNamespaceKey, targetNamespace);
+
+			using (new EditorGUILayout.HorizontalScope())
 			{
+				using (new EditorGUI.DisabledScope(true))
+					EditorGUILayout.TextField("Folder", targetFolder);
+
+				if (GUILayout.Button("Browse…", GUILayout.Width(80))) BrowseForFolder();
+				if (GUILayout.Button("Selection", GUILayout.Width(80))) UseSelectedFolder();
+			}
+
+			if (string.IsNullOrEmpty(TypeName))
+			{
+				EditorGUILayout.HelpBox("Enter a prefix to begin.", MessageType.Info);
 				return;
 			}
 
-			var copyPath = Application.dataPath + "/" + prefixName + "StateMachine.cs";
-			if (!FileExists())
+			EditorGUILayout.LabelField($"Will generate  {targetFolder}/{TypeName}StateMachine.cs",
+									   EditorStyles.miniLabel);
+
+			if (File.Exists(OutputPath))
+				EditorGUILayout.HelpBox("That file already exists and will not be overwritten.", MessageType.Error);
+		}
+
+		private void DrawStates()
+		{
+			EditorGUILayout.Space(8);
+
+			using (new EditorGUILayout.HorizontalScope())
 			{
-				// do not overwrite
-				using var outfile = new StreamWriter(copyPath);
-				outfile.WriteLine($"using UnityEngine;");
-				// The Foldout attribute this used to import came from NaughtyAttributes, which this package
-				// has not bundled since v1.0.2 - and NMJToolBox is no longer a namespace at all. Emitting a
-				// using for a namespace that does not exist made the generated file fail to compile.
-				if (useUnityEvents) outfile.WriteLine($"using UnityEngine.Events;");
-				outfile.WriteLine($"");
-				if (useRegions) outfile.WriteLine($"#region States");
-				outfile.WriteLine($"public enum {prefixName}State");
-				outfile.WriteLine($"{{");
-				foreach (var state in states)
-				{
-					outfile.WriteLine($"    {state},");
-				}
+				EditorGUILayout.LabelField($"States ({states.Count})", EditorStyles.boldLabel);
+				GUILayout.FlexibleSpace();
 
-				outfile.WriteLine($"}}");
-				outfile.WriteLine($"");
-				if (useRegions) outfile.WriteLine($"#endregion");
-				outfile.WriteLine($"");
-				outfile.WriteLine($"public class {prefixName}StateMachine : MonoBehaviour");
-				outfile.WriteLine($"{{");
-				outfile.WriteLine($"");
-				outfile.WriteLine($"    private {prefixName}State _currentState;");
-				outfile.WriteLine($"");
-				if (useRegions) outfile.WriteLine($"    #region Public properties");
-				outfile.WriteLine($"    public {prefixName}State CurrentState {{ get => _currentState; private set => _currentState = value; }}");
-				if (useRegions) outfile.WriteLine($"    #endregion");
-				if (spaceRegions) outfile.WriteLine($"");
-				if (useRegions) outfile.WriteLine($"    #region Init");
-				outfile.WriteLine($"    private void Start()");
-				outfile.WriteLine($"    {{");
-				outfile.WriteLine($"        TransitionToState(CurrentState, {prefixName}State.{states[defaultState]});");
-				outfile.WriteLine($"    }}");
-				if (useRegions) outfile.WriteLine($"    #endregion");
-				if (spaceRegions) outfile.WriteLine($"");
-				if (useRegions) outfile.WriteLine($"    #region Update");
-				outfile.WriteLine($"    private void Update()");
-				outfile.WriteLine($"    {{");
-				outfile.WriteLine($"        OnStateUpdate(CurrentState);");
-				outfile.WriteLine($"    }}");
-				if (useRegions) outfile.WriteLine($"    #endregion");
-				if (spaceRegions) outfile.WriteLine($"");
-				if (useRegions) outfile.WriteLine($"    #region State Machine");
-				outfile.WriteLine($"    private void OnStateEnter({prefixName}State state)");
-				outfile.WriteLine($"    {{");
-				outfile.WriteLine($"        switch (state)");
-				outfile.WriteLine($"        {{");
-				foreach (var state in states)
-				{
-					var stateMethod = info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "");
-					outfile.WriteLine($"            case {prefixName}State.{state}:");
-					outfile.WriteLine($"                OnEnter{stateMethod}();");
-					outfile.WriteLine($"                break;");
-				}
+				if (GUILayout.Button("−", EditorStyles.miniButtonLeft, GUILayout.Width(26)) && states.Count > 0)
+					states.RemoveAt(states.Count - 1);
 
-				outfile.WriteLine($"            default:");
-				outfile.WriteLine($"                Debug.LogError(\"OnStateEnter: Invalid state \" + state.ToString());");
-				outfile.WriteLine($"                break;");
-				outfile.WriteLine($"        }}");
-				outfile.WriteLine($"    }}");
-
-				outfile.WriteLine($"    private void OnStateUpdate({prefixName}State state)");
-				outfile.WriteLine($"    {{");
-				outfile.WriteLine($"        switch (state)");
-				outfile.WriteLine($"        {{");
-				foreach (var state in states)
-				{
-					var stateMethod = info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "");
-					outfile.WriteLine($"            case {prefixName}State.{state}:");
-					outfile.WriteLine($"                OnUpdate{stateMethod}();");
-					outfile.WriteLine($"                break;");
-				}
-
-				outfile.WriteLine($"            default:");
-				outfile.WriteLine($"                Debug.LogError(\"OnStateUpdate: Invalid state \" + state.ToString());");
-				outfile.WriteLine($"                break;");
-				outfile.WriteLine($"        }}");
-				outfile.WriteLine($"    }}");
-				outfile.WriteLine($"    private void OnStateExit({prefixName}State state)");
-				outfile.WriteLine($"    {{");
-				outfile.WriteLine($"        switch (state)");
-				outfile.WriteLine($"        {{");
-				foreach (var state in states)
-				{
-					var stateMethod = info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "");
-					outfile.WriteLine($"            case {prefixName}State.{state}:");
-					outfile.WriteLine($"                OnExit{stateMethod}();");
-					outfile.WriteLine($"                break;");
-				}
-
-				outfile.WriteLine($"            default:");
-				outfile.WriteLine($"                Debug.LogError(\"OnStateExit: Invalid state \" + state.ToString());");
-				outfile.WriteLine($"                break;");
-				outfile.WriteLine($"        }}");
-				outfile.WriteLine($"    }}");
-				outfile.WriteLine($"    private void TransitionToState({prefixName}State fromState, {prefixName}State toState)");
-				outfile.WriteLine($"    {{");
-				outfile.WriteLine($"        OnStateExit(fromState);");
-				outfile.WriteLine($"        CurrentState = toState;");
-				outfile.WriteLine($"        OnStateEnter(toState);");
-				outfile.WriteLine($"    }}");
-
-				outfile.WriteLine($"    private void TransitionToState({prefixName}State toState)");
-				outfile.WriteLine($"    {{");
-				outfile.WriteLine($"        TransitionToState(CurrentState, toState);");
-				outfile.WriteLine($"    }}");
-				if (useRegions) outfile.WriteLine($"    #endregion");
-				if (spaceRegions) outfile.WriteLine($"");
-				if (!groupByPhase)
-				{
-					foreach (var state in states)
-					{
-						var stateMethod = info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "");
-						if (useRegions) outfile.WriteLine($"    #region State {state}");
-						if (useFoldoutsOnEvents) outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
-						if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Enter = new UnityEvent();");
-						if (useFoldoutsOnEvents) outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
-						if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Exit = new UnityEvent();");
-						outfile.WriteLine($"    private void OnEnter{stateMethod}()");
-						outfile.WriteLine($"    {{");
-						if (useUnityEvents) outfile.WriteLine($"        On{stateMethod}Enter?.Invoke();");
-						outfile.WriteLine($"    }}");
-						outfile.WriteLine($"    private void OnUpdate{stateMethod}()");
-						outfile.WriteLine($"    {{");
-						outfile.WriteLine($"    }}");
-						outfile.WriteLine($"    private void OnExit{stateMethod}()");
-						outfile.WriteLine($"    {{");
-						if (useUnityEvents) outfile.WriteLine($"        On{stateMethod}Exit?.Invoke();");
-						outfile.WriteLine($"    }}");
-						if (useRegions) outfile.WriteLine($"    #endregion");
-						if (spaceRegions) outfile.WriteLine($"");
-					}
-				}
-				else
-				{
-					if (useRegions) outfile.WriteLine($"    #region EnterState");
-					foreach (var stateMethod in states.Select(state => info.ToTitleCase(state.Replace("_", " ").ToLower()).Replace(" ", "")))
-					{
-						if (useFoldoutsOnEvents) outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
-						if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Enter = new UnityEvent();");
-						outfile.WriteLine($"    private void OnEnter{stateMethod}()");
-						outfile.WriteLine($"    {{");
-						if (useUnityEvents) outfile.WriteLine($"        On{stateMethod}Enter?.Invoke();");
-						outfile.WriteLine($"    }}");
-					}
-
-					if (useRegions) outfile.WriteLine($"    #region UpdateState");
-					foreach (var stateMethod in states.Select(state => info
-																	   .ToTitleCase(state.Replace("_", " ")
-																						 .ToLower()).Replace(" ", "")))
-					{
-						outfile.WriteLine($"    private void OnUpdate{stateMethod}()");
-						outfile.WriteLine($"    {{");
-						outfile.WriteLine($"    }}");
-					}
-
-					if (useRegions) outfile.WriteLine($"    #region ExitState");
-					foreach (var stateMethod in states.Select(state => info
-																	   .ToTitleCase(state.Replace("_", " ")
-																						 .ToLower()).Replace(" ", "")))
-					{
-						if (useFoldoutsOnEvents) outfile.WriteLine($"    [Foldout(\"{stateMethod}\")]");
-						if (useUnityEvents) outfile.WriteLine($"    public UnityEvent On{stateMethod}Exit = new UnityEvent();");
-						outfile.WriteLine($"    private void OnExit{stateMethod}()");
-						outfile.WriteLine($"    {{");
-						if (useUnityEvents) outfile.WriteLine($"        On{stateMethod}Exit?.Invoke();");
-						outfile.WriteLine($"    }}");
-					}
-				}
-
-				outfile.WriteLine($"}}");
+				if (GUILayout.Button("+", EditorStyles.miniButtonRight, GUILayout.Width(26)))
+					states.Add($"STATE_{states.Count}");
 			}
 
+			for (var i = 0; i < states.Count; i++)
+			{
+				using (new EditorGUILayout.HorizontalScope())
+				{
+					states[i] = SanitiseState(EditorGUILayout.TextField($"State {i}", states[i]));
+
+					// A radio, not a checkbox: exactly one state is the default, so clicking a
+					// different one has to move the flag rather than leave two set. The old version
+					// used a plain toggle and could not represent that.
+					if (EditorGUILayout.Toggle(defaultState == i, EditorStyles.radioButton, GUILayout.Width(20)))
+						defaultState = i;
+
+					GUILayout.Label("default", EditorStyles.miniLabel, GUILayout.Width(48));
+				}
+			}
+
+			if (states.Count == 0)
+				EditorGUILayout.HelpBox("Add at least one state.", MessageType.Warning);
+
+			if (defaultState >= states.Count) defaultState = 0;
+
+			var duplicates = states.GroupBy(s => s, StringComparer.Ordinal).Where(g => g.Count() > 1).ToList();
+			if (duplicates.Count > 0)
+			{
+				EditorGUILayout.HelpBox(
+										"Duplicate state names: " + string.Join(", ", duplicates.Select(g => g.Key)) +
+										". Enum members must be unique.", MessageType.Error);
+			}
+		}
+
+		private void DrawOptions()
+		{
+			EditorGUILayout.Space(8);
+			codeStyleOpen = EditorGUILayout.Foldout(codeStyleOpen, "Code style", true);
+			if (!codeStyleOpen) return;
+
+			useUnityEvents = EditorGUILayout.ToggleLeft(
+													   new GUIContent("Generate UnityEvents",
+																	  "A serialised enter/exit event per state, so designers can hook them up."),
+													   useUnityEvents);
+
+			useRegions = EditorGUILayout.ToggleLeft("Wrap sections in #region", useRegions);
+
+			using (new EditorGUI.DisabledScope(!useRegions))
+				spaceRegions = EditorGUILayout.ToggleLeft("Blank line between regions", spaceRegions && useRegions);
+
+			groupByPhase = EditorGUILayout.ToggleLeft(
+													  new GUIContent("Group by phase",
+																	 "Off: all three methods for a state together. On: every Enter, then every Update, then every Exit."),
+													  groupByPhase);
+		}
+
+		private void DrawFooter()
+		{
+			EditorGUILayout.Space(6);
+
+			var blocked = string.IsNullOrEmpty(TypeName) ||
+						  states.Count == 0 ||
+						  states.Distinct(StringComparer.Ordinal).Count() != states.Count ||
+						  File.Exists(OutputPath);
+
+			using (new EditorGUILayout.HorizontalScope())
+			{
+				GUILayout.FlexibleSpace();
+
+				using (new EditorGUI.DisabledScope(blocked))
+				{
+					if (GUILayout.Button("Generate", GUILayout.Width(140), GUILayout.Height(26))) Generate();
+				}
+			}
+		}
+
+		private void BrowseForFolder()
+		{
+			var absolute = EditorUtility.OpenFolderPanel("Generate into", targetFolder, string.Empty);
+			if (string.IsNullOrEmpty(absolute)) return;
+
+			var projectRoot = Directory.GetParent(Application.dataPath)?.FullName ?? Application.dataPath;
+
+			if (!absolute.Replace('\\', '/').StartsWith(projectRoot.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase))
+			{
+				EditorUtility.DisplayDialog("Outside the project",
+											"Pick a folder inside this project's Assets directory.", "OK");
+				return;
+			}
+
+			targetFolder = "Assets" + absolute.Replace('\\', '/')[(projectRoot.Replace('\\', '/').Length + "/Assets".Length)..];
+			EditorPrefs.SetString(LastFolderKey, targetFolder);
+		}
+
+		private void UseSelectedFolder()
+		{
+			var path = AssetDatabase.GetAssetPath(Selection.activeObject);
+			if (string.IsNullOrEmpty(path)) return;
+
+			targetFolder = AssetDatabase.IsValidFolder(path) ? path : Path.GetDirectoryName(path)?.Replace('\\', '/');
+			if (string.IsNullOrEmpty(targetFolder)) targetFolder = "Assets";
+
+			EditorPrefs.SetString(LastFolderKey, targetFolder);
+		}
+
+		// ===================================================================================
+		// Naming
+		// ===================================================================================
+
+		/// <summary>The prefix as a valid PascalCase type-name fragment, or empty.</summary>
+		private string TypeName
+		{
+			get
+			{
+				var cleaned = new string(prefixName.Where(c => char.IsLetterOrDigit(c) || c == '_').ToArray());
+				if (cleaned.Length == 0) return string.Empty;
+				if (char.IsDigit(cleaned[0])) cleaned = "_" + cleaned;
+				return char.ToUpperInvariant(cleaned[0]) + cleaned[1..];
+			}
+		}
+
+		private string OutputPath
+		{
+			get
+			{
+				var projectRoot = Directory.GetParent(Application.dataPath)?.FullName ?? Application.dataPath;
+				return Path.Combine(projectRoot, targetFolder, TypeName + "StateMachine.cs");
+			}
+		}
+
+		/// <summary>Uppercase, underscore-separated, and always a legal C# identifier.</summary>
+		private static string SanitiseState(string raw)
+		{
+			var cleaned = new string((raw ?? string.Empty).Trim()
+													  .Select(c => char.IsLetterOrDigit(c) ? char.ToUpperInvariant(c) : '_')
+													  .ToArray());
+
+			cleaned = cleaned.Trim('_');
+			if (cleaned.Length == 0) return "STATE";
+			return char.IsDigit(cleaned[0]) ? "_" + cleaned : cleaned;
+		}
+
+		/// <summary>STATE_NAME → StateName, for the per-state method names.</summary>
+		private static string ToPascal(string state)
+		{
+			var info = CultureInfo.InvariantCulture.TextInfo;
+			return info.ToTitleCase(state.Replace("_", " ").ToLowerInvariant()).Replace(" ", string.Empty);
+		}
+
+		// ===================================================================================
+		// Generation
+		// ===================================================================================
+
+		private void Generate()
+		{
+			var path = OutputPath;
+
+			if (File.Exists(path))
+			{
+				Debug.LogError($"[NMJ] '{path}' already exists; nothing was written.");
+				return;
+			}
+
+			var directory = Path.GetDirectoryName(path);
+			if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+
+			File.WriteAllText(path, BuildSource());
+			EditorPrefs.SetString(LastFolderKey, targetFolder);
+
 			AssetDatabase.Refresh();
+
+			var asset = AssetDatabase.LoadAssetAtPath<MonoScript>($"{targetFolder}/{TypeName}StateMachine.cs");
+			if (asset) EditorGUIUtility.PingObject(asset);
+
+			Debug.Log($"[NMJ] Generated {targetFolder}/{TypeName}StateMachine.cs with {states.Count} state(s).");
+		}
+
+		private string BuildSource()
+		{
+			var builder = new StringBuilder(2048);
+			var hasNamespace = !string.IsNullOrWhiteSpace(targetNamespace);
+			var indent = hasNamespace ? "\t" : string.Empty;
+
+			builder.AppendLine("using UnityEngine;");
+			if (useUnityEvents) builder.AppendLine("using UnityEngine.Events;");
+			builder.AppendLine();
+
+			if (hasNamespace)
+			{
+				builder.AppendLine($"namespace {targetNamespace.Trim()}");
+				builder.AppendLine("{");
+			}
+
+			BuildEnum(builder, indent);
+			builder.AppendLine();
+			BuildClass(builder, indent);
+
+			if (hasNamespace) builder.AppendLine("}");
+
+			return builder.ToString();
+		}
+
+		private void BuildEnum(StringBuilder builder, string indent)
+		{
+			Region(builder, indent, "States", true);
+
+			builder.AppendLine($"{indent}public enum {TypeName}State");
+			builder.AppendLine($"{indent}{{");
+
+			foreach (var state in states) builder.AppendLine($"{indent}\t{state},");
+
+			builder.AppendLine($"{indent}}}");
+
+			Region(builder, indent, "States", false);
+		}
+
+		private void BuildClass(StringBuilder builder, string indent)
+		{
+			var type = TypeName;
+			var inner = indent + "\t";
+
+			builder.AppendLine($"{indent}public class {type}StateMachine : MonoBehaviour");
+			builder.AppendLine($"{indent}{{");
+
+			builder.AppendLine($"{inner}public {type}State CurrentState {{ get; private set; }}");
+			builder.AppendLine();
+
+			Region(builder, inner, "Unity messages", true);
+			builder.AppendLine($"{inner}private void Start()");
+			builder.AppendLine($"{inner}{{");
+			builder.AppendLine($"{inner}\tOnStateEnter(CurrentState);");
+			builder.AppendLine($"{inner}}}");
+			builder.AppendLine();
+			builder.AppendLine($"{inner}private void Update()");
+			builder.AppendLine($"{inner}{{");
+			builder.AppendLine($"{inner}\tOnStateUpdate(CurrentState);");
+			builder.AppendLine($"{inner}}}");
+			Region(builder, inner, "Unity messages", false);
+			if (spaceRegions) builder.AppendLine();
+
+			Region(builder, inner, "Transitions", true);
+			builder.AppendLine($"{inner}public void TransitionToState({type}State toState)");
+			builder.AppendLine($"{inner}{{");
+			builder.AppendLine($"{inner}\t// A self-transition would replay Exit and Enter for a state that never changed,");
+			builder.AppendLine($"{inner}\t// resetting whatever those methods set up.");
+			builder.AppendLine($"{inner}\tif (toState == CurrentState) return;");
+			builder.AppendLine();
+			builder.AppendLine($"{inner}\tOnStateExit(CurrentState);");
+			builder.AppendLine($"{inner}\tCurrentState = toState;");
+			builder.AppendLine($"{inner}\tOnStateEnter(toState);");
+			builder.AppendLine($"{inner}}}");
+			Region(builder, inner, "Transitions", false);
+			if (spaceRegions) builder.AppendLine();
+
+			Region(builder, inner, "Dispatch", true);
+			BuildSwitch(builder, inner, "OnStateEnter", "OnEnter");
+			builder.AppendLine();
+			BuildSwitch(builder, inner, "OnStateUpdate", "OnUpdate");
+			builder.AppendLine();
+			BuildSwitch(builder, inner, "OnStateExit", "OnExit");
+			Region(builder, inner, "Dispatch", false);
+			if (spaceRegions) builder.AppendLine();
+
+			if (groupByPhase) BuildByPhase(builder, inner);
+			else BuildByState(builder, inner);
+
+			builder.AppendLine($"{indent}}}");
+		}
+
+		private void BuildSwitch(StringBuilder builder, string indent, string methodName, string handlerPrefix)
+		{
+			builder.AppendLine($"{indent}private void {methodName}({TypeName}State state)");
+			builder.AppendLine($"{indent}{{");
+			builder.AppendLine($"{indent}\tswitch (state)");
+			builder.AppendLine($"{indent}\t{{");
+
+			foreach (var state in states)
+			{
+				builder.AppendLine($"{indent}\t\tcase {TypeName}State.{state}:");
+				builder.AppendLine($"{indent}\t\t\t{handlerPrefix}{ToPascal(state)}();");
+				builder.AppendLine($"{indent}\t\t\tbreak;");
+			}
+
+			builder.AppendLine();
+			builder.AppendLine($"{indent}\t\tdefault:");
+			builder.AppendLine($"{indent}\t\t\tDebug.LogError($\"{methodName}: unhandled state {{state}}\", this);");
+			builder.AppendLine($"{indent}\t\t\tbreak;");
+			builder.AppendLine($"{indent}\t}}");
+			builder.AppendLine($"{indent}}}");
+		}
+
+		private void BuildByState(StringBuilder builder, string indent)
+		{
+			foreach (var state in states)
+			{
+				var method = ToPascal(state);
+
+				Region(builder, indent, state, true);
+
+				if (useUnityEvents)
+				{
+					builder.AppendLine($"{indent}public UnityEvent on{method}Enter = new UnityEvent();");
+					builder.AppendLine($"{indent}public UnityEvent on{method}Exit = new UnityEvent();");
+					builder.AppendLine();
+				}
+
+				Handler(builder, indent, "OnEnter", method, useUnityEvents ? $"on{method}Enter" : null);
+				builder.AppendLine();
+				Handler(builder, indent, "OnUpdate", method, null);
+				builder.AppendLine();
+				Handler(builder, indent, "OnExit", method, useUnityEvents ? $"on{method}Exit" : null);
+
+				Region(builder, indent, state, false);
+				if (spaceRegions) builder.AppendLine();
+			}
+		}
+
+		private void BuildByPhase(StringBuilder builder, string indent)
+		{
+			if (useUnityEvents)
+			{
+				Region(builder, indent, "Events", true);
+				foreach (var method in states.Select(ToPascal))
+				{
+					builder.AppendLine($"{indent}public UnityEvent on{method}Enter = new UnityEvent();");
+					builder.AppendLine($"{indent}public UnityEvent on{method}Exit = new UnityEvent();");
+				}
+
+				Region(builder, indent, "Events", false);
+				if (spaceRegions) builder.AppendLine();
+			}
+
+			// Each phase opens and closes its own region. The old version opened three and closed
+			// none, which is what stopped the generated file compiling.
+			BuildPhase(builder, indent, "Enter", "OnEnter", true);
+			BuildPhase(builder, indent, "Update", "OnUpdate", false);
+			BuildPhase(builder, indent, "Exit", "OnExit", true);
+		}
+
+		private void BuildPhase(StringBuilder builder, string indent, string label, string prefix, bool raisesEvent)
+		{
+			Region(builder, indent, label, true);
+
+			for (var i = 0; i < states.Count; i++)
+			{
+				var method = ToPascal(states[i]);
+				var eventName = raisesEvent && useUnityEvents ? $"on{method}{label}" : null;
+
+				Handler(builder, indent, prefix, method, eventName);
+				if (i < states.Count - 1) builder.AppendLine();
+			}
+
+			Region(builder, indent, label, false);
+			if (spaceRegions) builder.AppendLine();
+		}
+
+		private static void Handler(StringBuilder builder, string indent, string prefix, string method, string eventName)
+		{
+			builder.AppendLine($"{indent}private void {prefix}{method}()");
+			builder.AppendLine($"{indent}{{");
+			if (!string.IsNullOrEmpty(eventName)) builder.AppendLine($"{indent}\t{eventName}?.Invoke();");
+			builder.AppendLine($"{indent}}}");
+		}
+
+		private void Region(StringBuilder builder, string indent, string label, bool open)
+		{
+			if (!useRegions) return;
+			builder.AppendLine(open ? $"{indent}#region {label}" : $"{indent}#endregion");
 		}
 	}
 }

@@ -17,48 +17,46 @@ namespace NMJTools.Extensions
 			return items.GroupBy(property).Select(x => x.First());
 		}
 
-		public static IEnumerable<T> Shuffle<T>(this IEnumerable<T> array, bool canBeNull = false)
+		/// <summary>
+		/// A shuffled copy, using a shared generator.
+		/// </summary>
+		/// <remarks>
+		/// this changed: the old version constructed <c>new Random()</c> per call. Mono seeds a
+		/// parameterless Random from the system clock, so two shuffles in the same frame - shuffling a
+		/// deck and then a loot table, say - came out in lockstep. One shared instance also removes the
+		/// per-call allocation. The algorithm is now a Fisher-Yates over the copy rather than repeated
+		/// <c>RemoveAt</c> on a List, which was O(n^2) for no gain.
+		/// </remarks>
+		public static IEnumerable<T> Shuffle<T>(this IEnumerable<T> array, bool canBeNull = false) =>
+			ShuffleInternal(array, SharedRandom, canBeNull, nameof(Shuffle));
+
+		/// <summary>A shuffled copy that is reproducible for a given seed.</summary>
+		public static IEnumerable<T> Shuffle<T>(this IEnumerable<T> array, int seed, bool canBeNull = false) =>
+			ShuffleInternal(array, new Random(seed), canBeNull, nameof(Shuffle));
+
+		/// <summary>
+		/// One generator for every unseeded shuffle. Not thread-safe, which is correct here: Unity
+		/// gameplay code runs on the main thread, and guarding it would cost every caller a lock.
+		/// </summary>
+		private static readonly Random SharedRandom = new();
+
+		private static List<T> ShuffleInternal<T>(IEnumerable<T> source, Random random, bool canBeNull, string caller)
 		{
-			var originalList = array.ToList();
-			// ReSharper disable once ConvertIfStatementToSwitchStatement
-			if (originalList.Count <= 0 && canBeNull) return null;
-			if (originalList.Count <= 0)
-				throw new ArgumentOutOfRangeException(nameof(array), "Shuffle: Collection is Empty");
-			if (originalList.Count == 1)
-				return originalList;
-			var shuffledList = new List<T>();
-			var rand = new Random();
-			for (var i = originalList.Count - 1; i >= 0; i--)
+			var items = source?.ToList();
+
+			if (items == null || items.Count == 0)
 			{
-				var randomArrayIndex = rand.Next(i + 1);
-				shuffledList.Add(originalList[randomArrayIndex]);
-				originalList.RemoveAt(randomArrayIndex);
+				if (canBeNull) return null;
+				throw new ArgumentOutOfRangeException(nameof(source), $"{caller}: Collection is empty");
 			}
 
-			array = shuffledList;
-			return array;
-		}
-
-		public static IEnumerable<T> Shuffle<T>(this IEnumerable<T> array, int seed, bool canBeNull = false)
-		{
-			var originalList = array.ToList();
-			// ReSharper disable once ConvertIfStatementToSwitchStatement
-			if (originalList.Count <= 0 && canBeNull) return null;
-			if (originalList.Count <= 0)
-				throw new ArgumentOutOfRangeException(nameof(array), "Shuffled seed: Collection is Empty");
-			if (originalList.Count == 1)
-				return originalList;
-			var shuffledList = new List<T>();
-			var rand = new Random(seed);
-			for (var i = originalList.Count - 1; i >= 0; i--)
+			for (var i = items.Count - 1; i > 0; i--)
 			{
-				var randomArrayIndex = rand.Next(i + 1);
-				shuffledList.Add(originalList[randomArrayIndex]);
-				originalList.RemoveAt(randomArrayIndex);
+				var j = random.Next(i + 1);
+				(items[i], items[j]) = (items[j], items[i]);
 			}
 
-			array = shuffledList;
-			return array;
+			return items;
 		}
 
 		public static void Shuffle<T>(this IList<T> list)
@@ -136,15 +134,26 @@ namespace NMJTools.Extensions
 		public static T Dequeue<T>(this List<T> list)
 		{
 			if (list.Count <= 0) throw new ArgumentNullException(nameof(list), "Dequeue: List is empty");
-			var firstElementIndex = list[0];
+			var first = list[0]; // this changed: was named firstElementIndex but holds the element
 			list.RemoveAt(0);
-			return firstElementIndex;
+			return first;
 		}
 
-		public static T Loop<T>(this T[] element, int index) where T : IConvertible
+		/// <summary>
+		/// Indexes an array with wraparound, so an ever-increasing counter keeps cycling.
+		/// </summary>
+		// this changed: dropped the `where T : IConvertible` constraint, which excluded every
+		// reference type for no reason - the method never converts anything. The index now wraps
+		// properly with a modulo instead of a single `if`: before, index 7 into a 3-element array
+		// returned element 0 rather than element 1, and a negative index threw.
+		public static T Loop<T>(this T[] element, int index)
 		{
-			if (index >= element.Length) index = 0;
-			return element[index];
+			if (element == null || element.Length == 0)
+				throw new ArgumentOutOfRangeException(nameof(element), "Loop: array is null or empty");
+
+			var wrapped = index % element.Length;
+			if (wrapped < 0) wrapped += element.Length;
+			return element[wrapped];
 		}
 
 		public static IEnumerable<T> DequeueChunk<T>(this Queue<T> queue, int chunkSize)

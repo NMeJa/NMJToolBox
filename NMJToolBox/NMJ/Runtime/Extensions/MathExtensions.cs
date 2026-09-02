@@ -56,7 +56,9 @@ namespace NMJTools.Extensions
 		/// <summary>Shortest signed difference between two angles, in [-180, 180].</summary>
 		public static float AngleDifference(this float from, float to) => Mathf.DeltaAngle(from, to);
 
-		/// <summary>Threshold a float into a bool, mirroring <see cref="ParsingExtensions.ToBoolean"/>.</summary>
+		/// <summary>True when the value falls inside the range.</summary>
+		// this changed: the doc comment pointed at ParsingExtensions.ToBoolean, a type that no longer
+		// exists, and described the wrong method anyway - IsBetween is a range test, not a threshold.
 		public static bool IsBetween(this float value, float min, float max, bool inclusive = true) =>
 			inclusive ? value >= min && value <= max : value > min && value < max;
 
@@ -72,8 +74,8 @@ namespace NMJTools.Extensions
 			step <= 0f ? value : Mathf.Round(value / step) * step;
 
 		/// <summary>
-		/// Thresholds a float into a bool. Moved here from ParsingExtensions, which had nothing to do
-		/// with parsing in this case — it is scalar maths.
+		/// Thresholds a float into a bool. Lives here rather than in a parsing helper because it is
+		/// scalar maths, not parsing.
 		/// </summary>
 		/// <param name="value">The floating-point scalar value to evaluate.</param>
 		/// <param name="useAbsolute">Compare the magnitude, ignoring sign.</param>

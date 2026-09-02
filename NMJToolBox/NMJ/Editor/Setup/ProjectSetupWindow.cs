@@ -1,65 +1,184 @@
-using System.Collections.Generic;
-using System.IO;
+using System;
 using System.Linq;
 using UnityEditor;
-using UnityEditor.PackageManager;
-using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 
 namespace NMJTools.Setup
 {
 	/// <summary>
-	/// One window to bring a fresh project up to the standard package set.
+	/// One window to bring a fresh project up to the standard package set — and one button to do it.
 	///
-	/// What it can and cannot do, plainly: UPM packages (git and OpenUPM) install without any further
-	/// input. Paid Asset Store packages cannot — Unity has no API to buy or download store content
-	/// because entitlement is checked server-side against the signed-in account. For those, the
-	/// window looks for a copy already in the per-user Asset Store cache and imports that; failing
-	/// that, it opens the store page. Nothing here can conjure a license.
+	/// What it can and cannot do, plainly: UPM packages (git, OpenUPM and Unity's registry) install in
+	/// a single transaction with no further input. Paid Asset Store packages cannot be downloaded —
+	/// Unity checks entitlement server-side against the signed-in account, so nothing can make a
+	/// package the user does not own appear. What it does instead is find the copy Unity already
+	/// cached when the package was last downloaded on this machine, and import it silently. Only a
+	/// package that has never been downloaded here needs a trip to the store page.
+	///
+	/// Every item is a toggle, and the set of toggles is a <see cref="SetupProfile"/> asset, so the
+	/// choice travels with the project rather than with the machine.
 	/// </summary>
 	public class ProjectSetupWindow : EditorWindow
 	{
 		private Vector2 scroll;
-		private AddRequest activeRequest;
-		private readonly Queue<PackageEntry> installQueue = new();
-		private string statusMessage = string.Empty;
-		private bool includeOptional = true;
+		private SetupProfile profile;
+		private SetupProfile[] availableProfiles = Array.Empty<SetupProfile>();
+		private string[] profileNames = Array.Empty<string>();
+		private int profileIndex;
+		private bool showRemovals = true;
 
 		[MenuItem("Tools/NMJ/Setup/Project Setup", false, 290)]
 		public static void Open()
 		{
 			var window = GetWindow<ProjectSetupWindow>(true, "NMJ Project Setup");
-			window.minSize = new Vector2(560, 520);
+			window.minSize = new Vector2(620, 620);
 			AssetStoreLocator.Refresh();
 			window.Show();
 		}
 
+		private void OnEnable()
+		{
+			RefreshProfiles();
+			PackageInstaller.Changed += Repaint;
+		}
+
+		private void OnDisable() => PackageInstaller.Changed -= Repaint;
+
+		private void RefreshProfiles()
+		{
+			availableProfiles = SetupProfile.FindAll().ToArray();
+			profileNames = availableProfiles.Select(p => p.name).ToArray();
+
+			if (availableProfiles.Length == 0)
+			{
+				// Nothing saved yet: work against an in-memory profile so the window opens with a
+				// sensible set ticked instead of an empty list and a nag to create an asset first.
+				if (!profile || AssetDatabase.Contains(profile))
+					profile = SetupProfile.CreateTransient();
+
+				profileIndex = -1;
+				return;
+			}
+
+			var resolved = SetupProfile.Resolve();
+			profileIndex = Mathf.Max(0, Array.IndexOf(availableProfiles, resolved));
+			profile = availableProfiles[profileIndex];
+		}
+
+		private bool IsTransient => profile && !AssetDatabase.Contains(profile);
+
 		private void OnGUI()
 		{
-			DrawHeader();
+			DrawProfileBar();
+			DrawDefinesBar();
 
 			scroll = EditorGUILayout.BeginScrollView(scroll);
 
-			DrawSection("Free / open source", InstallSource.Git, InstallSource.OpenUpm, InstallSource.Registry);
-			DrawSection("Paid — Asset Store", InstallSource.AssetStore);
+			DrawRemovals();
+
+			foreach (PackageCategory category in Enum.GetValues(typeof(PackageCategory)))
+				DrawCategory(category);
 
 			EditorGUILayout.EndScrollView();
 
 			DrawFooter();
 		}
 
-		private static void DrawHeader()
+		// ===================================================================================
+		// Header
+		// ===================================================================================
+
+		private void DrawProfileBar()
 		{
 			EditorGUILayout.Space(6);
-			EditorGUILayout.LabelField("Standard Project Packages", EditorStyles.boldLabel);
 
-			EditorGUILayout.HelpBox(
-									"Free and OpenUPM packages install automatically.\n\n" +
-									"Paid Asset Store packages cannot be installed by script — Unity checks entitlement " +
-									"server-side. If you already downloaded one on this machine it is imported from the " +
-									"Asset Store cache; otherwise the store page opens.",
-									MessageType.Info);
+			using (new EditorGUILayout.HorizontalScope())
+			{
+				EditorGUILayout.LabelField("Profile", EditorStyles.boldLabel, GUILayout.Width(50));
 
+				if (availableProfiles.Length > 0)
+				{
+					EditorGUI.BeginChangeCheck();
+					profileIndex = EditorGUILayout.Popup(profileIndex, profileNames);
+					if (EditorGUI.EndChangeCheck())
+					{
+						profile = availableProfiles[profileIndex];
+						SetupProfile.Remember(profile);
+					}
+				}
+				else
+				{
+					EditorGUILayout.LabelField("(unsaved defaults)", EditorStyles.miniLabel);
+				}
+
+				if (GUILayout.Button("Preset ▾", EditorStyles.miniButton, GUILayout.Width(70))) ShowPresetMenu();
+
+				if (GUILayout.Button(IsTransient ? "Save Profile…" : "New…", EditorStyles.miniButton, GUILayout.Width(95)))
+				{
+					var created = SetupProfile.CreateAsset();
+					if (created)
+					{
+						if (IsTransient) CopyInto(profile, created);
+						RefreshProfiles();
+					}
+				}
+
+				if (GUILayout.Button("Reload", EditorStyles.miniButton, GUILayout.Width(60)))
+				{
+					AssetStoreLocator.Refresh();
+					RefreshProfiles();
+				}
+			}
+
+			if (IsTransient)
+			{
+				EditorGUILayout.HelpBox(
+										"No SetupProfile asset in this project, so these toggles are not saved yet. " +
+										"Run Setup works fine without one — press Save Profile… to commit the " +
+										"selection so a clone reproduces it.",
+										MessageType.Info);
+			}
+			else if (profile && !string.IsNullOrWhiteSpace(profile.Description))
+			{
+				EditorGUILayout.LabelField(profile.Description, EditorStyles.wordWrappedMiniLabel);
+			}
+		}
+
+		private void ShowPresetMenu()
+		{
+			var menu = new GenericMenu();
+
+			foreach (SetupProfile.Preset preset in Enum.GetValues(typeof(SetupProfile.Preset)))
+			{
+				var captured = preset;
+				menu.AddItem(new GUIContent(ObjectNames.NicifyVariableName(preset.ToString())), false,
+							 () =>
+								 {
+									 if (!EditorUtility.DisplayDialog(
+																	  "Apply Preset",
+																	  $"Replace every toggle in '{profile.name}' with the {captured} preset?",
+																	  "Apply", "Cancel"))
+										 return;
+
+									 profile.ApplyPreset(captured);
+									 Repaint();
+								 });
+			}
+
+			menu.ShowAsContext();
+		}
+
+		private static void CopyInto(SetupProfile source, SetupProfile destination)
+		{
+			foreach (var entry in PackageCatalog.All) destination.SetEnabled(entry, source.IsEnabled(entry));
+			foreach (var removal in PackageCatalog.Removals) destination.SetEnabled(removal, source.IsEnabled(removal));
+
+			EditorUtility.SetDirty(destination);
+			AssetDatabase.SaveAssets();
+		}
+
+		private void DrawDefinesBar()
+		{
 			using (new EditorGUILayout.HorizontalScope())
 			{
 				PackageDetector.AutoManage = EditorGUILayout.ToggleLeft(
@@ -71,31 +190,99 @@ namespace NMJTools.Setup
 			}
 
 			var odin = PackageCatalog.All.FirstOrDefault(e => e.displayName == "Odin Inspector");
-			if (odin != null && PackageDetector.IsPresent(odin))
-			{
-				EditorGUI.BeginChangeCheck();
-				PackageDetector.ForceAttributesWithOdin = EditorGUILayout.ToggleLeft(
-																					 new GUIContent("Force NMJ attributes alongside Odin",
-																									"Both packages define [ReadOnly], [Required] and [Button]. Enabling this makes " +
-																									"those names ambiguous wherever both namespaces are imported."),
-																					 PackageDetector.ForceAttributesWithOdin);
+			if (odin == null || !PackageDetector.IsPresent(odin)) return;
 
-				if (EditorGUI.EndChangeCheck()) PackageDetector.Sync(true);
-			}
+			EditorGUI.BeginChangeCheck();
+			PackageDetector.ForceAttributesWithOdin = EditorGUILayout.ToggleLeft(
+																				 new GUIContent("Force NMJ attributes alongside Odin",
+																								"Both packages define [ReadOnly], [Required] and [Button]. Enabling this makes " +
+																								"those names ambiguous wherever both namespaces are imported."),
+																				 PackageDetector.ForceAttributesWithOdin);
 
-			EditorGUILayout.Space(4);
+			if (EditorGUI.EndChangeCheck()) PackageDetector.Sync(true);
 		}
 
-		private void DrawSection(string titleLabel, params InstallSource[] sources)
+		// ===================================================================================
+		// Body
+		// ===================================================================================
+
+		private void DrawRemovals()
 		{
-			var entries = PackageCatalog.All.Where(e => sources.Contains(e.source)).ToList();
-			if (entries.Count == 0) return;
+			var removals = PackageCatalog.Removals;
+			if (removals.Count == 0) return;
 
 			EditorGUILayout.Space(6);
-			EditorGUILayout.LabelField(titleLabel, EditorStyles.boldLabel);
+			showRemovals = EditorGUILayout.Foldout(showRemovals, "Remove (Unity template packages)", true, EditorStyles.foldoutHeader);
+			if (!showRemovals) return;
+
+			var installed = PackageManifest.ReadDependencies();
+
+			foreach (var removal in removals)
+			{
+				using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+				{
+					using (new EditorGUILayout.HorizontalScope())
+					{
+						var enabled = profile.IsEnabled(removal);
+
+						EditorGUI.BeginChangeCheck();
+						enabled = EditorGUILayout.ToggleLeft(removal.displayName, enabled, GUILayout.Width(220));
+						if (EditorGUI.EndChangeCheck())
+						{
+							profile.SetEnabled(removal, enabled);
+							MarkProfileDirty();
+						}
+
+						GUILayout.FlexibleSpace();
+
+						EditorGUILayout.LabelField(
+												   installed.Contains(removal.packageId) ? "present" : "not installed",
+												   EditorStyles.miniLabel, GUILayout.Width(90));
+					}
+
+					if (!string.IsNullOrEmpty(removal.reason))
+						EditorGUILayout.LabelField(removal.reason, EditorStyles.wordWrappedMiniLabel);
+				}
+			}
+		}
+
+		private void DrawCategory(PackageCategory category)
+		{
+			var entries = PackageCatalog.InCategory(category).ToList();
+			if (entries.Count == 0) return;
+
+			EditorGUILayout.Space(8);
+			EditorGUILayout.LabelField(HeadingFor(category), EditorStyles.boldLabel);
+
+			using (new EditorGUILayout.HorizontalScope())
+			{
+				GUILayout.Space(4);
+				if (GUILayout.Button("All", EditorStyles.miniButtonLeft, GUILayout.Width(40)))
+					SetAll(entries, true);
+				if (GUILayout.Button("None", EditorStyles.miniButtonRight, GUILayout.Width(45)))
+					SetAll(entries, false);
+				GUILayout.FlexibleSpace();
+			}
 
 			foreach (var entry in entries) DrawEntry(entry);
 		}
+
+		private void SetAll(System.Collections.Generic.IEnumerable<PackageEntry> entries, bool enabled)
+		{
+			foreach (var entry in entries) profile.SetEnabled(entry, enabled);
+			MarkProfileDirty();
+		}
+
+		private static string HeadingFor(PackageCategory category) => category switch
+		{
+			PackageCategory.Core      => "Core",
+			PackageCategory.Debugging => "Debugging & profiling",
+			PackageCategory.Authoring => "Authoring & content",
+			PackageCategory.Optional  => "Optional",
+			PackageCategory.Mobile    => "Mobile",
+			PackageCategory.Paid      => "Paid — Asset Store",
+			_                         => category.ToString()
+		};
 
 		private void DrawEntry(PackageEntry entry)
 		{
@@ -105,244 +292,119 @@ namespace NMJTools.Setup
 			{
 				using (new EditorGUILayout.HorizontalScope())
 				{
-					var icon = present ? "✓" : "•";
-					var style = new GUIStyle(EditorStyles.label)
+					// An installed package's toggle is disabled rather than hidden: the tick still
+					// means "this project wants this package", which is what a profile records.
+					using (new EditorGUI.DisabledScope(present))
 					{
-						normal = { textColor = present ? new Color(0.45f, 0.85f, 0.45f) : EditorStyles.label.normal.textColor },
-						fontStyle = FontStyle.Bold
-					};
+						var enabled = profile.IsEnabled(entry);
 
-					EditorGUILayout.LabelField($"{icon}  {entry.displayName}", style);
+						EditorGUI.BeginChangeCheck();
+						enabled = EditorGUILayout.ToggleLeft(
+															 new GUIContent($"{(present ? "✓ " : string.Empty)}{entry.displayName}",
+																			entry.packageId),
+															 enabled, GUILayout.Width(230));
+						if (EditorGUI.EndChangeCheck())
+						{
+							profile.SetEnabled(entry, enabled);
+							MarkProfileDirty();
+						}
+					}
+
 					GUILayout.FlexibleSpace();
 
 					if (!string.IsNullOrEmpty(entry.define))
-						EditorGUILayout.LabelField(entry.define, EditorStyles.miniLabel, GUILayout.Width(190));
+						EditorGUILayout.LabelField(entry.define, EditorStyles.miniLabel, GUILayout.Width(170));
 
-					DrawEntryButton(entry, present);
+					EditorGUILayout.LabelField(StatusFor(entry, present), EditorStyles.miniLabel, GUILayout.Width(120));
+
+					if (!string.IsNullOrEmpty(entry.url) &&
+						GUILayout.Button(new GUIContent("↗", "Open the package page"), EditorStyles.miniButton, GUILayout.Width(22)))
+					{
+						Application.OpenURL(entry.url);
+					}
 				}
 
 				if (!string.IsNullOrEmpty(entry.notes))
 					EditorGUILayout.LabelField(entry.notes, EditorStyles.wordWrappedMiniLabel);
-
-				if (entry.source != InstallSource.AssetStore || present) return;
-
-				var cachedPath = AssetStoreLocator.FindCachedPackage(entry);
-				EditorGUILayout.LabelField(
-										   cachedPath != null
-											   ? "Found in Asset Store cache — can be imported."
-											   : "Not in the Asset Store cache. Download it once via Package Manager > My Assets.",
-										   EditorStyles.miniLabel);
 			}
 		}
 
-		private void DrawEntryButton(PackageEntry entry, bool present)
+		private static string StatusFor(PackageEntry entry, bool present)
 		{
-			if (present)
-			{
-				using (new EditorGUI.DisabledScope(true)) GUILayout.Button("Installed", GUILayout.Width(90));
-				return;
-			}
+			if (present) return "installed";
+			if (entry.IsUpm) return entry.source.ToString();
 
-			using (new EditorGUI.DisabledScope(activeRequest != null))
-			{
-				switch (entry.source)
-				{
-					case InstallSource.Git:
-					case InstallSource.Registry:
-					case InstallSource.OpenUpm:
-						if (GUILayout.Button("Install", GUILayout.Width(90))) Enqueue(new[] { entry });
-						break;
-
-					case InstallSource.AssetStore:
-						var cachedPath = AssetStoreLocator.FindCachedPackage(entry);
-						if (cachedPath != null)
-						{
-							if (GUILayout.Button("Import", GUILayout.Width(90)))
-								AssetDatabase.ImportPackage(cachedPath, true);
-						}
-						else if (GUILayout.Button("Store Page", GUILayout.Width(90)))
-						{
-							Application.OpenURL(entry.url);
-						}
-
-						break;
-				}
-			}
+			return AssetStoreLocator.FindCachedPackage(entry) != null ? "cached — importable" : "not downloaded";
 		}
+
+		private void MarkProfileDirty()
+		{
+			if (!IsTransient) EditorUtility.SetDirty(profile);
+		}
+
+		// ===================================================================================
+		// Footer
+		// ===================================================================================
 
 		private void DrawFooter()
 		{
 			EditorGUILayout.Space(4);
 
-			if (!string.IsNullOrEmpty(statusMessage))
-				EditorGUILayout.HelpBox(statusMessage, MessageType.None);
+			var plan = PackageInstaller.BuildPlan(profile);
+			var busy = PackageInstaller.IsBusy;
 
-			includeOptional = EditorGUILayout.ToggleLeft(
-														 "Also open store pages for missing paid packages",
-														 includeOptional);
+			var status = PackageInstaller.Status;
+			if (!string.IsNullOrEmpty(status)) EditorGUILayout.HelpBox(status, MessageType.None);
+
+			if (plan.Unavailable.Count > 0)
+			{
+				EditorGUILayout.HelpBox(
+										$"{plan.Unavailable.Count} paid package(s) are selected but have never been " +
+										"downloaded on this machine, so there is nothing to import: " +
+										string.Join(", ", plan.Unavailable.Select(e => e.displayName)) +
+										".\n\nDownload each once via Package Manager ▸ My Assets and they will be " +
+										"imported automatically from then on, in this and every other project.",
+										MessageType.Warning);
+			}
 
 			using (new EditorGUILayout.HorizontalScope())
 			{
+				EditorGUILayout.LabelField(
+										   plan.IsEmpty
+											   ? "Nothing to do."
+											   : $"{plan.ToInstall.Count} to install · {plan.ToRemove.Count} to remove · {plan.ToImport.Count} to import",
+										   EditorStyles.miniLabel);
+
 				GUILayout.FlexibleSpace();
 
-				using (new EditorGUI.DisabledScope(activeRequest != null))
+				if (busy && GUILayout.Button(new GUIContent("Reset", "Clear a stuck run"), GUILayout.Width(60)))
+					PackageInstaller.Reset();
+
+				using (new EditorGUI.DisabledScope(busy || plan.IsEmpty))
 				{
-					if (GUILayout.Button("Install All Free Packages", GUILayout.Height(28), GUILayout.Width(220)))
-						InstallEverything();
+					if (GUILayout.Button($"Run Setup ({plan.TotalActions})", GUILayout.Height(28), GUILayout.Width(200)))
+						Run(plan);
 				}
 			}
-
-			if (activeRequest == null) return;
-			EditorGUILayout.LabelField("Installing…", EditorStyles.miniLabel);
 		}
 
-		private void InstallEverything()
+		private void Run(PackageInstaller.Plan plan)
 		{
-			var missing = PackageCatalog.All
-										.Where(e => e.source != InstallSource.AssetStore)
-										.Where(e => !PackageDetector.IsPresent(e))
-										.ToList();
-
-			if (missing.Count == 0)
+			var summary = string.Join("\n", new[]
 			{
-				statusMessage = "Every free package is already installed.";
-			}
-			else
-			{
-				// The OpenUPM scoped registry has to exist in manifest.json before Client.Add can
-				// resolve a com.tayx.* or com.yasirkula.* name, so it is written first.
-				if (missing.Any(e => e.source == InstallSource.OpenUpm)) EnsureOpenUpmRegistry(missing);
-				Enqueue(missing);
-			}
+				plan.ToInstall.Count > 0 ? "Install: " + string.Join(", ", plan.ToInstall.Select(e => e.displayName)) : null,
+				plan.ToRemove.Count > 0 ? "Remove: " + string.Join(", ", plan.ToRemove.Select(r => r.displayName)) : null,
+				plan.ToImport.Count > 0 ? "Import from cache: " + string.Join(", ", plan.ToImport.Select(e => e.displayName)) : null
+			}.Where(s => s != null));
 
-			if (!includeOptional) return;
-
-			var paid = PackageCatalog.All
-									 .Where(e => e.source == InstallSource.AssetStore)
-									 .Where(e => !PackageDetector.IsPresent(e))
-									 .ToList();
-
-			foreach (var entry in paid)
-			{
-				var cachedPath = AssetStoreLocator.FindCachedPackage(entry);
-				if (cachedPath != null) AssetDatabase.ImportPackage(cachedPath, true);
-				else Application.OpenURL(entry.url);
-			}
-		}
-
-		private void Enqueue(IEnumerable<PackageEntry> entries)
-		{
-			foreach (var entry in entries) installQueue.Enqueue(entry);
-			ProcessQueue();
-		}
-
-		private void ProcessQueue()
-		{
-			if (activeRequest != null || installQueue.Count == 0) return;
-
-			var entry = installQueue.Dequeue();
-			statusMessage = $"Installing {entry.displayName}…";
-
-			activeRequest = Client.Add(entry.identifier);
-			EditorApplication.update += PollRequest;
-		}
-
-		private void PollRequest()
-		{
-			if (activeRequest is not { IsCompleted: true }) return;
-
-			EditorApplication.update -= PollRequest;
-
-			statusMessage = activeRequest.Status == StatusCode.Success
-								? $"Installed {activeRequest.Result.displayName} {activeRequest.Result.version}."
-								: $"Failed: {activeRequest.Error?.message}";
-
-			if (activeRequest.Status != StatusCode.Success)
-				Debug.LogError($"[NMJ] Package install failed: {activeRequest.Error?.message}");
-
-			activeRequest = null;
-			Repaint();
-
-			ProcessQueue();
-		}
-
-		/// <summary>
-		/// Adds the OpenUPM scoped registry to <c>Packages/manifest.json</c> if it is not already
-		/// there, merging scopes rather than replacing them so an existing OpenUPM entry from another
-		/// package survives.
-		/// </summary>
-		private void EnsureOpenUpmRegistry(IEnumerable<PackageEntry> entries)
-		{
-			var scopes = entries
-						 .Where(e => e.source == InstallSource.OpenUpm)
-						 .Select(e => ScopeOf(e.identifier))
-						 .Where(s => !string.IsNullOrEmpty(s))
-						 .Distinct()
-						 .ToList();
-
-			if (scopes.Count == 0) return;
-
-			var manifestPath = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Packages", "manifest.json"));
-			if (!File.Exists(manifestPath))
-			{
-				Debug.LogError($"[NMJ] Could not find manifest.json at '{manifestPath}'.");
+			if (!EditorUtility.DisplayDialog(
+											 "Run Project Setup",
+											 summary + "\n\nThis runs as one package transaction, then imports the cached " +
+											 "Asset Store packages without prompting. The editor will recompile.",
+											 "Run", "Cancel"))
 				return;
-			}
 
-			var text = File.ReadAllText(manifestPath);
-
-			// Hand-editing JSON is unpleasant, but Unity ships no writable manifest API, and
-			// JsonUtility cannot round-trip the arbitrary shape of a manifest without dropping keys.
-			// Bailing out with a clear message beats silently corrupting the file.
-			if (text.Contains(PackageCatalog.OpenUpmRegistryUrl))
-			{
-				statusMessage = "OpenUPM registry already present in manifest.json.";
-				return;
-			}
-
-			var scopeList = string.Join(",\n        ", scopes.Select(s => $"\"{s}\""));
-			var registryBlock =
-				"  \"scopedRegistries\": [\n" +
-				"    {\n" +
-				$"      \"name\": \"{PackageCatalog.OpenUpmRegistryName}\",\n" +
-				$"      \"url\": \"{PackageCatalog.OpenUpmRegistryUrl}\",\n" +
-				"      \"scopes\": [\n" +
-				$"        {scopeList}\n" +
-				"      ]\n" +
-				"    }\n" +
-				"  ],\n";
-
-			if (text.Contains("\"scopedRegistries\""))
-			{
-				Debug.LogWarning("[NMJ] manifest.json already has a scopedRegistries block, but not OpenUPM. " +
-								 "Add the OpenUPM registry by hand to avoid clobbering the existing one:\n" +
-								 registryBlock);
-				statusMessage = "Add the OpenUPM registry manually — see the Console.";
-				return;
-			}
-
-			var insertAt = text.IndexOf('{');
-			if (insertAt < 0)
-			{
-				Debug.LogError("[NMJ] manifest.json is not valid JSON.");
-				return;
-			}
-
-			text = text.Insert(insertAt + 1, "\n" + registryBlock);
-			File.WriteAllText(manifestPath, text);
-			Client.Resolve();
-
-			Debug.Log("[NMJ] Added the OpenUPM scoped registry to manifest.json.");
+			PackageInstaller.Run(profile, plan);
 		}
-
-		/// <summary>com.yasirkula.runtimeinspector → com.yasirkula (OpenUPM scopes are per-publisher).</summary>
-		private static string ScopeOf(string packageId)
-		{
-			if (string.IsNullOrEmpty(packageId)) return string.Empty;
-			var parts = packageId.Split('.');
-			return parts.Length >= 2 ? $"{parts[0]}.{parts[1]}" : packageId;
-		}
-
-		private void OnDisable() => EditorApplication.update -= PollRequest;
 	}
 }

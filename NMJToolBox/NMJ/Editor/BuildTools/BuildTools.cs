@@ -141,7 +141,9 @@ namespace NMJTools.BuildTools
 				BuildTarget.StandaloneWindows or BuildTarget.StandaloneWindows64 => product + ".exe",
 				BuildTarget.StandaloneOSX                                        => product + ".app",
 				BuildTarget.StandaloneLinux64                                    => product + ".x86_64",
-				BuildTarget.Android                                              => product + ".apk",
+				// this changed: an App Bundle build must be named .aab. Naming it .apk still builds,
+				// then fails at upload time - the slowest possible place to find out.
+				BuildTarget.Android => product + (EditorUserBuildSettings.buildAppBundle ? ".aab" : ".apk"),
 				_                                                                => product
 			};
 		}

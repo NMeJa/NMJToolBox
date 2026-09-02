@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace NMJTools.Hierarchy
 {
@@ -36,6 +37,13 @@ namespace NMJTools.Hierarchy
 
 			var group = new GameObject(DefaultName);
 			Undo.RegisterCreatedObjectUndo(group, "Create Collection");
+
+			// this changed: `new GameObject` always lands in the *active* scene. With two scenes open
+			// and the selection in the non-active one, a collection with no shared parent was created
+			// in the wrong scene, and the children were then dragged across with it. Only needed when
+			// parent is null - re-parenting moves the object between scenes on its own.
+			if (!parent && roots[0].gameObject.scene.IsValid())
+				SceneManager.MoveGameObjectToScene(group, roots[0].gameObject.scene);
 
 			if (isUi) Undo.AddComponent<RectTransform>(group);
 
